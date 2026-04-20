@@ -22,19 +22,19 @@
     function getWatchdogProfile(runtime) {
         if (runtime.ios) {
             return {
-                restartCooldownMs: 7000,
-                initialSilenceThresholdMs: 20000,
-                staleStreamThresholdMs: 11000,
-                fallbackNoticeRetryCount: 5
+                restartCooldownMs: 8000,
+                initialSilenceThresholdMs: 25000,
+                staleStreamThresholdMs: 12000,
+                fallbackNoticeRetryCount: 6
             };
         }
 
         if (runtime.mobile) {
             return {
-                restartCooldownMs: 6000,
-                initialSilenceThresholdMs: 12000,
-                staleStreamThresholdMs: 9000,
-                fallbackNoticeRetryCount: 4
+                restartCooldownMs: 6500,
+                initialSilenceThresholdMs: 15000,
+                staleStreamThresholdMs: 10000,
+                fallbackNoticeRetryCount: 5
             };
         }
 

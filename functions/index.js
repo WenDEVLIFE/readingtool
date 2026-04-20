@@ -58,11 +58,15 @@ exports.sttTranscribe = onRequest({cors: true}, async (req, res) => {
           endpoint.searchParams.set("language", language);
         }
 
+        // Deepgram handles many formats, but we should specify the encoding if it's not webm
+        // Extract basic MIME type (e.g. 'audio/webm' from 'audio/webm;codecs=opus')
+        const baseMimeType = mimeType.split(';')[0].trim().toLowerCase();
+        
         const response = await fetch(endpoint.toString(), {
           method: "POST",
           headers: {
             "Authorization": `Token ${deepgramKey}`,
-            "Content-Type": mimeType,
+            "Content-Type": baseMimeType || "audio/webm",
           },
           body: audioBuffer,
         });
