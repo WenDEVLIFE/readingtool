@@ -3,7 +3,7 @@ let totalWordsRead = 0;
 let usedPassages = [];
 
 // GLOBAL ERROR LOGGER FOR MOBILE DEBUGGING
-window.addEventListener('error', function(e) {
+window.addEventListener('error', function (e) {
     const errorDiv = document.getElementById('mobile-debug-error-bar');
     if (errorDiv) {
         errorDiv.style.display = 'block';
@@ -11,7 +11,7 @@ window.addEventListener('error', function(e) {
     }
     console.error("GLOBAL ERROR caught:", e);
 });
-window.onunhandledrejection = function(event) {
+window.onunhandledrejection = function (event) {
     var div = document.getElementById('mobile-debug-error-bar');
     if (div) {
         div.style.display = 'block';
@@ -20,7 +20,7 @@ window.onunhandledrejection = function(event) {
 };
 
 // SIGNAL READY
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     var statusBar = document.getElementById('js-status-bar');
     if (statusBar) statusBar.innerText = 'JS: Ready';
 });
@@ -407,6 +407,9 @@ let recognitionSessionStartedAt = 0;
 let recognitionNoEventRestartCount = 0;
 let hasShownLiveHighlightFallbackNotice = false;
 let lastBackendSttError = "";
+let mobileLiveBackendHandle = null;
+let mobileLiveBackendInFlight = false;
+let mobileLiveBackendLastTranscript = "";
 let mobileStallWordIndex = -1;
 let mobileStallFinalMissCount = 0;
 let lastHesitationMarkedIndex = -1;
@@ -1006,23 +1009,36 @@ function normalizeWord(value) {
         .replace(/[^a-z0-9']/g, "");
 }
 
+function resetStartReadingButton() {
+    const btn = document.getElementById("startReadingBtn");
+    if (!btn) return;
+    btn.innerText = "🎤 START READING ALOUD";
+    btn.style.background = "#27ae60";
+}
+
 function getPlatformRuntime() {
     if (window.PlatformSpeechStrategy?.detectRuntime) {
         return window.PlatformSpeechStrategy.detectRuntime();
     }
 
-    const fallbackMobile =
-        window.matchMedia?.("(max-width: 768px)")?.matches ||
-        /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+    const fallbackMobileUa = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
     const fallbackIos = /iPad|iPhone|iPod/i.test(navigator.userAgent) && !window.MSStream;
     const fallbackAndroid = /Android/i.test(navigator.userAgent);
+    const fallbackIpadDesktopUa =
+        String(navigator.platform || "") === "MacIntel" &&
+        Number(navigator.maxTouchPoints || 0) > 1;
+    const fallbackMobile = fallbackMobileUa || fallbackIos || fallbackAndroid || fallbackIpadDesktopUa;
 
     return {
-        ios: fallbackIos,
+        ios: fallbackIos || fallbackIpadDesktopUa,
         android: fallbackAndroid,
         mobile: fallbackMobile,
         desktop: !fallbackMobile
     };
+}
+
+function shouldUseDeepgramMobileOnly(runtime = getPlatformRuntime()) {
+    return !!(runtime?.ios || runtime?.android);
 }
 
 function getWatchdogProfile() {
@@ -1894,15 +1910,15 @@ const INTERIM_MIN_TOKEN_LENGTH = 2;
 const MOBILE_FAST_READING_LOOKAHEAD = 1;
 const MOBILE_MAX_OMISSION_JUMP = 1;
 const USE_BACKEND_STT_MODE = true;
+const MOBILE_STREAM_TIMESLICE_FAST_MS = 50;
+const MOBILE_STREAM_TIMESLICE_STABLE_MS = 80;
+const MOBILE_STREAM_STALL_THRESHOLD_MS = 2600;
 const DEEPGRAM_API_KEY = "bf322035aa3f2ced5cc4dfb26579846b2ce1f91d";
 const BROWSER_RECOGNITION_LANG = "en-US";
 const BACKEND_STT_LANGUAGE = "en-US";
 const BACKEND_STT_MIN_TRANSCRIPT_CHARS = 2;
 const BACKEND_STT_MIN_MATCHED_WORDS = 4;
 const BACKEND_STT_MIN_MATCH_RATIO = 0.18;
-const BACKEND_STT_ENDPOINTS = [
-    "https://api.deepgram.com/v1/listen?model=nova-3&smart_format=true&punctuate=true"
-];
 const ENABLE_AZURE_PRONUNCIATION_ASSESSMENT = false;
 const AZURE_ASSESSMENT_ENDPOINTS = [];
 
@@ -2222,10 +2238,15 @@ async function startAudioRecording() {
         mediaRecorder.ondataavailable = (event) => {
             if (event.data && event.data.size > 0) {
                 recordedAudioChunks.push(event.data);
+                // PIPE TO AI STREAM (Mobile Real-time Highlighter)
+                if (deepgramSocket && deepgramSocket.readyState === 1) {
+                    deepgramSocket.send(event.data);
+                    deepgramAudioChunksSent++;
+                }
             }
         };
 
-        mediaRecorder.start(250);
+        mediaRecorder.start(mobileRecorderTimesliceMs);
         startStrictNoiseMonitor();
         return true;
     } catch (error) {
@@ -2444,54 +2465,51 @@ async function applyBackendSttTranscription(audioBlob, options = {}) {
     }
 
     lastBackendSttError = "";
-    const arrayBuffer = await audioBlob.arrayBuffer();
     const runtime = getPlatformRuntime();
 
-    if (runtime.mobile) {
-        console.log("Processing mobile transcription via Deepgram Direct API...");
-        
-        // Timeout for mobile: 15 seconds
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000);
+    if (shouldUseDeepgramMobileOnly(runtime)) {
+        console.log("Processing mobile transcription via backend STT endpoint...");
 
         try {
-            const rawMimeType = (audioBlob.type || "audio/webm").split(';')[0];
-            
-            const response = await fetch(BACKEND_STT_ENDPOINTS[0], {
-                method: "POST",
-                headers: {
-                    "Authorization": `Token ${DEEPGRAM_API_KEY}`,
-                    "Content-Type": rawMimeType
-                },
-                body: arrayBuffer,
-                signal: controller.signal
+            const arrayBuffer = await audioBlob.arrayBuffer();
+            const endpoint = buildExamFunctionUrl("/.netlify/functions/stt-transcribe");
+            const data = await requestExamJson(endpoint, {
+                audioBase64: arrayBufferToBase64(arrayBuffer),
+                mimeType: recordedAudioMimeType || audioBlob.type || "audio/webm",
+                language: BACKEND_STT_LANGUAGE,
+                provider: "deepgram"
             });
-
-            clearTimeout(timeoutId);
-
-            if (!response.ok) {
-                const errText = await response.text();
-                throw new Error(`Deepgram API failed: ${response.status}`);
-            }
-
-            const data = await response.json();
-            const transcript = data.results?.channels?.[0]?.alternatives?.[0]?.transcript || "";
-            return processBackendSttResult(transcript);
+            const transcript = String(data?.transcript || "").trim();
+            return processBackendSttResult(transcript, options);
         } catch (error) {
-            clearTimeout(timeoutId);
-            const isTimeout = error.name === "AbortError";
-            console.error("Deepgram Direct API failed:", isTimeout ? "Timeout" : error);
-            lastBackendSttError = isTimeout ? "Connection Timeout" : error.message;
+            console.error("Mobile backend STT failed:", error);
+            lastBackendSttError = String(error?.message || error || "Transcription failed");
             return false;
         }
     }
-    
+
     return false;
 }
 
-function processBackendSttResult(transcript) {
+function processBackendSttResult(transcript, options = {}) {
     const cleanTranscript = String(transcript).trim();
     if (!cleanTranscript) return false;
+
+    const livePreview = options.livePreview === true;
+
+    if (livePreview) {
+        if (cleanTranscript === mobileLiveBackendLastTranscript) {
+            return false;
+        }
+        mobileLiveBackendLastTranscript = cleanTranscript;
+
+        applyTranscriptToPassage(cleanTranscript, {
+            allowErrors: false
+        });
+        totalWordsRead = document.querySelectorAll(".passage-container .read-success").length;
+        updateRealtimeMetrics();
+        return true;
+    }
 
     if (cleanTranscript.length < BACKEND_STT_MIN_TRANSCRIPT_CHARS) {
         lastBackendSttError = "Empty transcript from STT";
@@ -2499,7 +2517,7 @@ function processBackendSttResult(transcript) {
     }
 
     const transcriptQuality = estimateTranscriptPassageQuality(cleanTranscript);
-    
+
     // Lower threshold for mobile match quality
     const minRatio = (getPlatformRuntime().mobile) ? 0.05 : BACKEND_STT_MIN_MATCH_RATIO;
     const minWords = (getPlatformRuntime().mobile) ? 1 : BACKEND_STT_MIN_MATCHED_WORDS;
@@ -2516,13 +2534,79 @@ function processBackendSttResult(transcript) {
     return true;
 }
 
+function startMobileBackendLivePreview() {
+    stopMobileBackendLivePreview();
+
+    if (!shouldUseDeepgramMobileOnly() || !USE_BACKEND_STT_MODE) {
+        return;
+    }
+
+    if (deepgramSocket && (deepgramSocket.readyState === 0 || deepgramSocket.readyState === 1)) {
+        return;
+    }
+
+    mobileLiveBackendLastTranscript = "";
+    mobileLiveBackendInFlight = false;
+
+    mobileLiveBackendHandle = setInterval(async () => {
+        if (!isRecording || mobileLiveBackendInFlight || !mediaRecorder) {
+            return;
+        }
+
+        if (deepgramSocket && deepgramSocket.readyState === 1) {
+            const now = Date.now();
+            const hasRecentStreamTranscript =
+                deepgramLastTranscriptAt > 0 &&
+                (now - deepgramLastTranscriptAt) <= MOBILE_STREAM_STALL_THRESHOLD_MS;
+
+            if (hasRecentStreamTranscript) {
+                return;
+            }
+
+            if (!mobileRecorderAdaptedToStable && deepgramAudioChunksSent > 30) {
+                mobileRecorderTimesliceMs = MOBILE_STREAM_TIMESLICE_STABLE_MS;
+                mobileRecorderAdaptedToStable = true;
+                deepgramLastStreamError = `stream stalled; next session uses ${MOBILE_STREAM_TIMESLICE_STABLE_MS}ms`;
+                refreshMobileLiveDebugLine();
+            }
+        }
+
+        if (!recordedAudioChunks || recordedAudioChunks.length < 4) {
+            return;
+        }
+
+        const sampleMime = recordedAudioMimeType || "audio/webm";
+        const snapshotBlob = new Blob(recordedAudioChunks, { type: sampleMime });
+        if (snapshotBlob.size < 12000) {
+            return;
+        }
+
+        mobileLiveBackendInFlight = true;
+        try {
+            await applyBackendSttTranscription(snapshotBlob, { livePreview: true });
+        } catch (error) {
+            console.warn("Mobile live preview update failed:", error);
+        } finally {
+            mobileLiveBackendInFlight = false;
+        }
+    }, 2800);
+}
+
+function stopMobileBackendLivePreview() {
+    if (mobileLiveBackendHandle) {
+        clearInterval(mobileLiveBackendHandle);
+        mobileLiveBackendHandle = null;
+    }
+    mobileLiveBackendInFlight = false;
+}
+
 /**
  * Applies the final STT results to the passage and updates the scoreboard.
  * Fixes the 0 WPM / 0 Accuracy bug by ensuring the final match is counted.
  */
 function applyFinalTranscriptionScoring(transcript) {
     console.log("Applying final transcription scoring...");
-    
+
     // 1. Mark the words in the passage based on the high-accuracy transcript
     applyTranscriptToPassage(transcript, {
         allowErrors: true,
@@ -2534,7 +2618,7 @@ function applyFinalTranscriptionScoring(transcript) {
 
     // 3. Re-calculate total success count from THE DOM (final truth)
     totalWordsRead = document.querySelectorAll(".passage-container .read-success").length;
-    
+
     // 4. Update the dashboard WITH A SAFETY DELAY for mobile metrics
     setTimeout(() => {
         showFluencyResults();
@@ -2591,7 +2675,7 @@ function applyTranscriptToPassage(transcript, options = {}) {
     resetHesitation();
 
     handleVoiceInput(cleanTranscript, {
-        allowErrors: true,
+        allowErrors: options.allowErrors !== false,
         confidence: 1,
         isFinal: true,
         forceDetailedMatching: true,
@@ -2765,6 +2849,12 @@ function startBackendOnlyRecordingSession() {
     lastSpeechAssistTranscript = "";
     lastMobileLiveFallbackTranscript = "";
     lastMobileLiveFallbackAt = 0;
+    deepgramLiveTranscriptCursor = "";
+    deepgramAudioChunksSent = 0;
+    deepgramLastDeltaLength = 0;
+    deepgramLastTranscriptAt = 0;
+    deepgramLastStreamError = "";
+    deepgramLastSocketState = "starting";
     lastHesitationMarkedIndex = -1;
     resetMobileStallTracking();
 
@@ -2790,27 +2880,16 @@ function startBackendOnlyRecordingSession() {
     startAudioRecording().then((started) => {
         if (!started && isRecording) {
             console.warn("Background audio recording failed to start.");
+            deepgramLastStreamError = "mediaRecorder start failed";
+            refreshMobileLiveDebugLine();
+            return;
         }
+
+        startMobileBackendLivePreview();
     });
 
-    // RESTORE LIVE FEEDBACK: Staggered start to prevent browser-level denial
-    setTimeout(() => {
-        if (!isRecording) return;
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (SpeechRecognition) {
-            try {
-                recognition = new SpeechRecognition();
-                recognition.continuous = true;
-                recognition.interimResults = true;
-                recognition.lang = 'en-US';
-                recognition.onresult = handleRecognitionResultEvent;
-                recognition.onerror = (e) => console.warn("Live highlight engine error:", e.error);
-                recognition.start();
-            } catch (e) {
-                console.warn("Could not start live highlighter:", e);
-            }
-        }
-    }, 600); 
+    startMobileLiveDebugTicker();
+
 }
 
 function handleRecognitionResultEvent(event) {
@@ -2858,7 +2937,10 @@ function handleRecognitionResultEvent(event) {
                 });
 
                 if (fallbackAction.shouldProcess) {
-                    handleVoiceInput(fallbackAction.snapshot, fallbackAction.options);
+                    handleVoiceInput(fallbackAction.snapshot, {
+                        ...fallbackAction.options,
+                        allowErrors: false
+                    });
                     lastMobileLiveFallbackTranscript = fallbackAction.snapshot;
                     lastMobileLiveFallbackAt = now;
                 }
@@ -2880,7 +2962,10 @@ function handleRecognitionResultEvent(event) {
                 });
 
                 if (fallbackAction.shouldProcess) {
-                    handleVoiceInput(fallbackAction.snapshot, fallbackAction.options);
+                    handleVoiceInput(fallbackAction.snapshot, {
+                        ...fallbackAction.options,
+                        allowErrors: false
+                    });
                     lastMobileLiveFallbackTranscript = fallbackAction.snapshot;
                     lastMobileLiveFallbackAt = now;
                 }
@@ -2907,7 +2992,10 @@ function handleRecognitionResultEvent(event) {
                 isFinal: true,
                 confidence: confidence ?? NaN
             });
-            handleVoiceInput(deltaWords.join(" "), finalDeltaOptions);
+            handleVoiceInput(deltaWords.join(" "), {
+                ...finalDeltaOptions,
+                allowErrors: false
+            });
             continue;
         }
 
@@ -2973,66 +3061,27 @@ async function runFluencyTestStartSequence() {
     bindSpeechRecoveryHandlers();
 
     const runtime = getPlatformRuntime();
-    // Use Deepgram for Mobile, Native for Desktop
-    const forceBackendMode = runtime.mobile;
+    // Use Deepgram only on mobile OS, native recognition on desktop.
+    const forceBackendMode = shouldUseDeepgramMobileOnly(runtime);
 
-    if (USE_BACKEND_STT_MODE && forceBackendMode) {
+    if (forceBackendMode) {
+        // Start background high-accuracy recording
         startBackendOnlyRecordingSession();
 
-        if (SpeechRecognition) {
-            recognition = new SpeechRecognition();
-            recognition.continuous = true;
-            recognition.interimResults = true;
-            recognition.maxAlternatives = 1;
-            recognition.lang = BROWSER_RECOGNITION_LANG;
-
-            recognition.onstart = () => {
-                recognitionSessionStartedAt = Date.now();
-                lastRecognitionEventAt = 0;
-                recognitionNoEventRestartCount = 0;
-                hasShownLiveHighlightFallbackNotice = false;
-            };
-
-            recognition.onresult = handleRecognitionResultEvent;
-            const lifecycleAdapter = getRecognitionLifecycleAdapter(getPlatformRuntime(), getWatchdogProfile());
-            recognition.onerror = (e) => {
-                console.warn("Live preview speech error:", e.error);
-
-                const shouldRestart = lifecycleAdapter.shouldRestartOnError({
-                    error: e.error,
-                    isRecording,
-                    shouldAutoRestartRecognition,
-                    allowAnyError: true
-                });
-                if (shouldRestart) {
-                    scheduleRecognitionRestart();
-                }
-            };
-            recognition.onend = () => {
-                if (lifecycleAdapter.shouldRestartOnEnd({ isRecording, shouldAutoRestartRecognition })) {
-                    scheduleRecognitionRestart();
-                    return;
-                }
-                console.log("Live preview recognition stopped");
-            };
-
-            startRecognitionWithRetry(120);
-        } else {
-            showAppAlert(
-                "Live word highlights are not supported on this browser. Final transcript scoring will appear after stopping recording.",
-                "Limited Live Highlight"
-            );
-        }
-
+        // MOBILE AI STREAMING (Real-time Highlighting)
+        initDeepgramLiveStream();
         return;
     }
 
     if (!SpeechRecognition) {
         showAppAlert("Please use Chrome browser for speech recognition support.", "Browser Required");
+        resetStartReadingButton();
         return;
     }
 
     recognition = new SpeechRecognition();
+    isRecording = true;
+    shouldAutoRestartRecognition = true;
 
     recognition.continuous = true;
     recognition.interimResults = true;
@@ -3116,6 +3165,25 @@ async function runFluencyTestStartSequence() {
     };
 
     startRecognitionWithRetry(120);
+
+    setTimeout(() => {
+        if (isRecording && recognitionSessionStartedAt === 0) {
+            shouldAutoRestartRecognition = false;
+            isRecording = false;
+            stopRecognitionWatchdog();
+            if (recognition) {
+                try {
+                    recognition.abort();
+                } catch { }
+                recognition = null;
+            }
+            resetStartReadingButton();
+            showAppAlert(
+                "Speech recognition did not start. Check microphone permission and try again.",
+                "Recognition Not Started"
+            );
+        }
+    }, 4200);
 }
 
 function buildCombinedTranscript(results) {
@@ -3477,6 +3545,21 @@ function determineErrorType(spoken, target, confidence = 1) {
 async function stopFluencyTest() {
     if (!isRecording) return;
 
+    stopMobileBackendLivePreview();
+    stopMobileLiveDebugTicker();
+
+    if (deepgramSocket) {
+        try {
+            deepgramSocket.onopen = null;
+            deepgramSocket.onmessage = null;
+            deepgramSocket.onclose = null;
+            deepgramSocket.onerror = null;
+            deepgramSocket.close();
+        } catch { }
+        deepgramSocket = null;
+    }
+    deepgramLiveTranscriptCursor = "";
+
     shouldAutoRestartRecognition = false;
     if (recognitionRestartHandle) {
         clearTimeout(recognitionRestartHandle);
@@ -3535,6 +3618,7 @@ async function stopFluencyTest() {
     document.getElementById("startReadingBtn").innerText = "⏳ PROCESSING...";
     document.getElementById("startReadingBtn").style.background = "#f39c12";
 
+    let backendSttApplied = false;
     if (recordedAudioBlob) {
         backendSttApplied = await applyBackendSttTranscription(recordedAudioBlob, {
             maxProcessIndex: stopBoundaryIndex
@@ -3559,11 +3643,37 @@ async function stopFluencyTest() {
         await applyAzurePronunciationAssessment(recordedAudioBlob);
     }
 
+    const domReadCount = document.querySelectorAll(".passage-container .read-success").length;
+    const indexBasedProgress = Math.max(0, Math.min(currentWordIndex, wordElements.length));
+    totalWordsRead = Math.max(totalWordsRead, domReadCount, indexBasedProgress);
+    updateRealtimeMetrics();
+
     document.getElementById("startReadingBtn").innerText = "🎤 START READING ALOUD";
     document.getElementById("startReadingBtn").style.background = "#27ae60";
 
     showFluencyResults();
 }
+
+function updateRealtimeMetrics() {
+    const safeTotalWords = Math.max(wordElements.length, 1);
+    const elapsedMinutes = Math.max(stopwatchSeconds / 60, 1 / 60);
+    const wordsReadNow = Number.isFinite(totalWordsRead) ? totalWordsRead : 0;
+    const wpm = Math.round(wordsReadNow / elapsedMinutes || 0);
+    const accuracy = Math.round((wordsReadNow / safeTotalWords) * 100);
+
+    currentFluencyMetrics = {
+        wordsRead: wordsReadNow,
+        totalWords: wordElements.length,
+        wpm,
+        accuracyPercent: accuracy
+    };
+
+    const wpmValEl = document.getElementById("wpmVal");
+    const spdValEl = document.getElementById("spdVal");
+    if (wpmValEl) wpmValEl.innerText = wpm;
+    if (spdValEl) spdValEl.innerText = wpm;
+}
+
 function showFluencyResults() {
     const timeElapsed = Math.max(stopwatchSeconds / 60, 1 / 60);
     const wpm = Math.round(totalWordsRead / timeElapsed || 0);
@@ -3601,6 +3711,16 @@ let currentFluencyMetrics = {
     wpm: 0,
     accuracyPercent: 0
 };
+let deepgramSocket = null; // AI Streaming for Mobile
+let deepgramLiveTranscriptCursor = "";
+let deepgramLastSocketState = "idle";
+let deepgramLastDeltaLength = 0;
+let deepgramAudioChunksSent = 0;
+let deepgramLastTranscriptAt = 0;
+let deepgramLastStreamError = "";
+let mobileLiveDebugTicker = null;
+let mobileRecorderTimesliceMs = MOBILE_STREAM_TIMESLICE_FAST_MS;
+let mobileRecorderAdaptedToStable = false;
 
 function resolveExamApiBase() {
     const host = String(window.location.hostname || "").toLowerCase();
@@ -3645,6 +3765,83 @@ async function requestExamJson(url, payload) {
     }
 
     return result;
+}
+
+function ensureMobileLiveDebugLine() {
+    let line = document.getElementById("mobileLiveDebugLine");
+    if (line) return line;
+
+    line = document.createElement("div");
+    line.id = "mobileLiveDebugLine";
+    line.style.position = "fixed";
+    line.style.right = "8px";
+    line.style.bottom = "8px";
+    line.style.zIndex = "10002";
+    line.style.background = "rgba(0,0,0,0.78)";
+    line.style.color = "#7CFC00";
+    line.style.fontFamily = "monospace";
+    line.style.fontSize = "10px";
+    line.style.lineHeight = "1.3";
+    line.style.padding = "6px 8px";
+    line.style.borderRadius = "8px";
+    line.style.maxWidth = "74vw";
+    line.style.pointerEvents = "none";
+    line.style.whiteSpace = "pre-line";
+    line.style.display = "none";
+    document.body.appendChild(line);
+    return line;
+}
+
+function getDeepgramSocketStateLabel() {
+    if (!deepgramSocket) return "none";
+    if (deepgramSocket.readyState === WebSocket.CONNECTING) return "connecting";
+    if (deepgramSocket.readyState === WebSocket.OPEN) return "open";
+    if (deepgramSocket.readyState === WebSocket.CLOSING) return "closing";
+    if (deepgramSocket.readyState === WebSocket.CLOSED) return "closed";
+    return "unknown";
+}
+
+function refreshMobileLiveDebugLine() {
+    const line = ensureMobileLiveDebugLine();
+    const runtime = getPlatformRuntime();
+    const mobileMode = shouldUseDeepgramMobileOnly(runtime);
+
+    if (!mobileMode) {
+        line.style.display = "none";
+        return;
+    }
+
+    line.style.display = "block";
+    const socketState = getDeepgramSocketStateLabel();
+    const now = Date.now();
+    const transcriptAgeMs = deepgramLastTranscriptAt ? (now - deepgramLastTranscriptAt) : -1;
+    const backendErr = String(lastBackendSttError || "").slice(0, 42);
+    const streamErr = String(deepgramLastStreamError || "").slice(0, 42);
+    line.innerText = [
+        `mobile:${mobileMode ? "yes" : "no"} socket:${socketState}`,
+        `chunks:${deepgramAudioChunksSent} deltaWords:${deepgramLastDeltaLength}`,
+        `lastMsgMs:${transcriptAgeMs < 0 ? "-" : transcriptAgeMs}`,
+        `sttErr:${backendErr || "-"}`,
+        `streamErr:${streamErr || "-"}`
+    ].join("\n");
+}
+
+function startMobileLiveDebugTicker() {
+    stopMobileLiveDebugTicker();
+    refreshMobileLiveDebugLine();
+    mobileLiveDebugTicker = setInterval(refreshMobileLiveDebugLine, 500);
+}
+
+function stopMobileLiveDebugTicker() {
+    if (mobileLiveDebugTicker) {
+        clearInterval(mobileLiveDebugTicker);
+        mobileLiveDebugTicker = null;
+    }
+
+    const line = document.getElementById("mobileLiveDebugLine");
+    if (line) {
+        line.style.display = "none";
+    }
 }
 
 async function startStudentAttemptRecord(studentName, level, passageTitle) {
@@ -4218,3 +4415,95 @@ window.onload = async () => {
 
     initDecisionDebugPanel();
 };
+function initDeepgramLiveStream() {
+    if (!shouldUseDeepgramMobileOnly()) {
+        return;
+    }
+
+    if (!DEEPGRAM_API_KEY) {
+        console.warn("Deepgram live stream skipped: missing DEEPGRAM_API_KEY");
+        deepgramLastStreamError = "missing DEEPGRAM_API_KEY";
+        refreshMobileLiveDebugLine();
+        return;
+    }
+
+    if (deepgramSocket && (deepgramSocket.readyState === 0 || deepgramSocket.readyState === 1)) {
+        return;
+    }
+
+    console.log("Initializing Mobile AI Stream...");
+    deepgramLastSocketState = "connecting";
+    refreshMobileLiveDebugLine();
+
+    const url = "wss://api.deepgram.com/v1/listen?model=nova-2&smart_format=true&interim_results=true&endpointing=10";
+    try {
+        deepgramSocket = new WebSocket(url, ["token", DEEPGRAM_API_KEY]);
+
+        deepgramSocket.onopen = () => {
+            console.log("AI Stream: Connected.");
+            showAppAlert("Deepgram AI Stream: READY", "AI Live Highlighter");
+            deepgramLastSocketState = "open";
+            deepgramLastStreamError = "";
+            refreshMobileLiveDebugLine();
+        };
+
+        deepgramSocket.onmessage = (message) => {
+            const data = JSON.parse(message.data);
+            const transcript = String(data.channel?.alternatives?.[0]?.transcript || "").trim();
+
+            if (transcript && isRecording) {
+                const lower = transcript.toLowerCase();
+                const cursor = String(deepgramLiveTranscriptCursor || "");
+                let delta = lower;
+
+                if (cursor && lower.startsWith(cursor)) {
+                    delta = lower.slice(cursor.length).trim();
+                } else if (cursor) {
+                    // Deepgram sometimes rewrites earlier words; use a short tail so live highlight can keep moving.
+                    const tailWords = lower.split(/\s+/).filter(Boolean).slice(-8);
+                    delta = tailWords.join(" ");
+                }
+
+                deepgramLiveTranscriptCursor = lower;
+
+                if (!delta) {
+                    return;
+                }
+
+                deepgramLastDeltaLength = delta.split(/\s+/).filter(Boolean).length;
+                deepgramLastTranscriptAt = Date.now();
+
+                handleVoiceInput(delta, {
+                    allowErrors: false,
+                    confidence: 1,
+                    isFinal: data.is_final === true,
+                    liveProgressOnly: true
+                });
+                updateRealtimeMetrics();
+                refreshMobileLiveDebugLine();
+            }
+        };
+
+        deepgramSocket.onclose = () => {
+            deepgramSocket = null;
+            deepgramLastSocketState = "closed";
+            refreshMobileLiveDebugLine();
+            if (isRecording) {
+                console.log("Attempting to reconnect stream...");
+                setTimeout(initDeepgramLiveStream, 500);
+            }
+        };
+
+        deepgramSocket.onerror = (err) => {
+            console.error("Deepgram Stream Error:", err);
+            deepgramLastSocketState = "error";
+            deepgramLastStreamError = String(err?.message || "socket error");
+            refreshMobileLiveDebugLine();
+        };
+    } catch (e) {
+        console.error("Deepgram initialization failed", e);
+        deepgramLastSocketState = "init-failed";
+        deepgramLastStreamError = String(e?.message || e || "init failed");
+        refreshMobileLiveDebugLine();
+    }
+}

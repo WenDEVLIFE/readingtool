@@ -7,12 +7,14 @@
         const ua = getUserAgent();
         const ios = /iPad|iPhone|iPod/i.test(ua) && !global.MSStream;
         const android = /Android/i.test(ua);
-        const mobileMedia = !!global.matchMedia?.("(max-width: 768px)")?.matches;
         const mobileUa = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
-        const mobile = mobileMedia || mobileUa;
+        const iPadDesktopUa =
+            String(global.navigator?.platform || "") === "MacIntel" &&
+            Number(global.navigator?.maxTouchPoints || 0) > 1;
+        const mobile = mobileUa || ios || android || iPadDesktopUa;
 
         return {
-            ios,
+            ios: ios || iPadDesktopUa,
             android,
             mobile,
             desktop: !mobile

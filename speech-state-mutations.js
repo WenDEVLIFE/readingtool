@@ -24,12 +24,16 @@
                 ctx.markWordAsRead?.(index);
                 setIndex(index + 1);
                 refresh(options);
+                // Trigger real-time metric update
+                ctx.updateRealtimeMetrics?.();
             },
             errorAndAdvance(className, options = {}) {
                 const index = getIndex();
                 ctx.markWordAsError?.(index, className);
                 setIndex(index + 1);
                 refresh(options);
+                // Trigger real-time metric update
+                ctx.updateRealtimeMetrics?.();
             },
             errorOnly(className, options = {}) {
                 const index = getIndex();
@@ -42,6 +46,8 @@
                 ctx.markWordAsRead?.(nextIndex);
                 setIndex(nextIndex + 1);
                 refresh(options);
+                // Trigger real-time metric update
+                ctx.updateRealtimeMetrics?.();
             },
             refresh
         };

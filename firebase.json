@@ -7,22 +7,45 @@
       "**/node_modules/**",
       "netlify/**",
       "netlify.toml",
-      "functions/**",
       ".agents/**",
       "database/**"
     ],
-    "rewrites": [
+    "redirects": [
       {
         "source": "/.netlify/functions/stt-transcribe",
-        "function": "sttTranscribe"
+        "destination": "https://word-harbor.netlify.app/.netlify/functions/stt-transcribe",
+        "type": 307
       },
       {
         "source": "/.netlify/functions/azure-pronunciation-assessment",
-        "function": "azurePronunciationAssessment"
+        "destination": "https://word-harbor.netlify.app/.netlify/functions/azure-pronunciation-assessment",
+        "type": 307
+      },
+      {
+        "source": "/.netlify/functions/student-attempt-start",
+        "destination": "https://word-harbor.netlify.app/.netlify/functions/student-attempt-start",
+        "type": 307
+      },
+      {
+        "source": "/.netlify/functions/student-attempt-complete",
+        "destination": "https://word-harbor.netlify.app/.netlify/functions/student-attempt-complete",
+        "type": 307
+      },
+      {
+        "source": "/.netlify/functions/teacher-login",
+        "destination": "https://word-harbor.netlify.app/.netlify/functions/teacher-login",
+        "type": 307
+      },
+      {
+        "source": "/.netlify/functions/teacher-register",
+        "destination": "https://word-harbor.netlify.app/.netlify/functions/teacher-register",
+        "type": 307
+      },
+      {
+        "source": "/.netlify/functions/teacher-results-list",
+        "destination": "https://word-harbor.netlify.app/.netlify/functions/teacher-results-list",
+        "type": 307
       }
     ]
-  },
-  "functions": {
-    "source": "functions"
   }
 }
