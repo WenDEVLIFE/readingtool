@@ -1,6 +1,29 @@
 let startTime = 0;
 let totalWordsRead = 0;
 let usedPassages = [];
+
+// GLOBAL ERROR LOGGER FOR MOBILE DEBUGGING
+window.addEventListener('error', function(e) {
+    const errorDiv = document.getElementById('mobile-debug-error-bar');
+    if (errorDiv) {
+        errorDiv.style.display = 'block';
+        errorDiv.innerText = `Error: ${e.message} at ${e.filename}:${e.lineno}:${e.colno}`;
+    }
+    console.error("GLOBAL ERROR caught:", e);
+});
+window.onunhandledrejection = function(event) {
+    var div = document.getElementById('mobile-debug-error-bar');
+    if (div) {
+        div.style.display = 'block';
+        div.innerText = 'PROMISE ERROR: ' + event.reason;
+    }
+};
+
+// SIGNAL READY
+document.addEventListener('DOMContentLoaded', function() {
+    var statusBar = document.getElementById('js-status-bar');
+    if (statusBar) statusBar.innerText = 'JS: Ready';
+});
 const assessmentData = {
     EASY: [
         {
@@ -397,7 +420,7 @@ let hasBoundSpeechRecoveryHandlers = false;
 function preparePassageForFluency(text) {
     const container = document.getElementById("passageText");
     const words = text.split(/\s+/);
-    container.innerHTML = ""; 
+    container.innerHTML = "";
     wordElements = [];
     normalizedPassageWords = [];
     currentWordIndex = 0;
@@ -420,7 +443,7 @@ function preparePassageForFluency(text) {
 
     words.forEach((word, index) => {
         const span = document.createElement("span");
-        span.innerText = word + " "; 
+        span.innerText = word + " ";
         span.classList.add("word");
         span.id = `word-${index}`;
         container.appendChild(span);
@@ -769,7 +792,7 @@ function recreateRecognitionForRestart() {
                     recognition.abort();
                 }
             }
-        } catch {}
+        } catch { }
 
         recognition = nextRecognition;
         startRecognitionWatchdog();
@@ -854,7 +877,7 @@ function scheduleRecognitionRestart() {
         try {
             try {
                 recognition.abort();
-            } catch {}
+            } catch { }
             recognition.start();
         } catch (error) {
             recognitionRestartHandle = setTimeout(() => {
@@ -863,7 +886,7 @@ function scheduleRecognitionRestart() {
                 try {
                     try {
                         recognition.abort();
-                    } catch {}
+                    } catch { }
                     recognition.start();
                 } catch (retryError) {
                     const recreated = recreateRecognitionForRestart();
@@ -871,7 +894,7 @@ function scheduleRecognitionRestart() {
                         try {
                             recognition.start();
                             return;
-                        } catch {}
+                        } catch { }
                     }
                     console.warn("Recognition restart failed:", retryError);
                 }
@@ -1431,9 +1454,9 @@ function getDecisionDebugLogger() {
 
     return {
         isEnabled: () => false,
-        setEnabled: () => {},
-        clear: () => {},
-        log: () => {},
+        setEnabled: () => { },
+        clear: () => { },
+        log: () => { },
         getRecent: () => []
     };
 }
@@ -1871,18 +1894,17 @@ const INTERIM_MIN_TOKEN_LENGTH = 2;
 const MOBILE_FAST_READING_LOOKAHEAD = 1;
 const MOBILE_MAX_OMISSION_JUMP = 1;
 const USE_BACKEND_STT_MODE = true;
+const DEEPGRAM_API_KEY = "bf322035aa3f2ced5cc4dfb26579846b2ce1f91d";
 const BROWSER_RECOGNITION_LANG = "en-US";
-const BACKEND_STT_LANGUAGE = "en";
+const BACKEND_STT_LANGUAGE = "en-US";
 const BACKEND_STT_MIN_TRANSCRIPT_CHARS = 2;
 const BACKEND_STT_MIN_MATCHED_WORDS = 4;
 const BACKEND_STT_MIN_MATCH_RATIO = 0.18;
 const BACKEND_STT_ENDPOINTS = [
-    "/.netlify/functions/stt-transcribe"
+    "https://api.deepgram.com/v1/listen?model=nova-3&smart_format=true&punctuate=true"
 ];
 const ENABLE_AZURE_PRONUNCIATION_ASSESSMENT = false;
-const AZURE_ASSESSMENT_ENDPOINTS = [
-    "/.netlify/functions/azure-pronunciation-assessment"
-];
+const AZURE_ASSESSMENT_ENDPOINTS = [];
 
 function clearWordStateClasses(el) {
     if (!el) return;
@@ -2180,7 +2202,8 @@ async function startAudioRecording() {
     recordedAudioMimeType = selectedMimeType || "";
 
     try {
-        const audioConstraints = {
+        const runtime = getPlatformRuntime();
+        const audioConstraints = runtime.mobile ? true : {
             echoCancellation: true,
             noiseSuppression: true,
             autoGainControl: true
@@ -2229,6 +2252,18 @@ async function ensureMicrophonePermission() {
     try {
         const probeStream = await navigator.mediaDevices.getUserMedia({ audio: true });
         probeStream.getTracks().forEach((track) => track.stop());
+
+        // Crucial for mobile: Wake up the AudioContext immediately after a user gesture
+        const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextCtor) {
+            if (!audioContext) {
+                audioContext = new AudioContextCtor();
+            }
+            if (audioContext.state === "suspended") {
+                await audioContext.resume();
+            }
+        }
+
         return true;
     } catch (error) {
         const reason = String(error?.name || "").toLowerCase();
@@ -2300,7 +2335,7 @@ function stopStrictNoiseMonitor() {
     audioAnalyser = null;
 
     if (audioContext) {
-        audioContext.close().catch(() => {});
+        audioContext.close().catch(() => { });
         audioContext = null;
     }
 }
@@ -2409,70 +2444,101 @@ async function applyBackendSttTranscription(audioBlob, options = {}) {
     }
 
     lastBackendSttError = "";
-
     const arrayBuffer = await audioBlob.arrayBuffer();
-    const audioBase64 = arrayBufferToBase64(arrayBuffer);
+    const runtime = getPlatformRuntime();
 
-    const requestPayload = {
-        audioBase64,
-        mimeType: recordedAudioMimeType || audioBlob.type || "audio/webm",
-        language: BACKEND_STT_LANGUAGE,
-        referenceText: currentPassageData.text,
-        provider: "auto"
-    };
+    if (runtime.mobile) {
+        console.log("Processing mobile transcription via Deepgram Direct API...");
+        
+        // Timeout for mobile: 15 seconds
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-    for (const endpoint of BACKEND_STT_ENDPOINTS) {
         try {
-            const response = await fetch(endpoint, {
+            const rawMimeType = (audioBlob.type || "audio/webm").split(';')[0];
+            
+            const response = await fetch(BACKEND_STT_ENDPOINTS[0], {
                 method: "POST",
                 headers: {
-                    "Content-Type": "application/json"
+                    "Authorization": `Token ${DEEPGRAM_API_KEY}`,
+                    "Content-Type": rawMimeType
                 },
-                body: JSON.stringify(requestPayload)
+                body: arrayBuffer,
+                signal: controller.signal
             });
 
+            clearTimeout(timeoutId);
+
             if (!response.ok) {
-                let details = "";
-                try {
-                    const errPayload = await response.json();
-                    details = String(errPayload?.error || errPayload?.details || "").trim();
-                } catch (err) {
-                    try {
-                        details = (await response.text()).trim();
-                    } catch (errText) {
-                        details = "";
-                    }
-                }
-                lastBackendSttError = details || `HTTP ${response.status}`;
-                continue;
+                const errText = await response.text();
+                throw new Error(`Deepgram API failed: ${response.status}`);
             }
 
-            const payload = await response.json();
-            const transcript = String(payload?.transcript || "").trim();
-
-            if (!payload?.ok || transcript.length < BACKEND_STT_MIN_TRANSCRIPT_CHARS) {
-                lastBackendSttError = String(payload?.error || payload?.details || "Empty transcript from STT");
-                continue;
-            }
-
-            const transcriptQuality = estimateTranscriptPassageQuality(transcript);
-            if (
-                transcriptQuality.matchedWords < BACKEND_STT_MIN_MATCHED_WORDS ||
-                transcriptQuality.matchRatio < BACKEND_STT_MIN_MATCH_RATIO
-            ) {
-                lastBackendSttError = `Low transcript overlap (${transcriptQuality.matchedWords}/${transcriptQuality.totalWords})`;
-                continue;
-            }
-
-            applyTranscriptToPassage(transcript, options);
-            return true;
+            const data = await response.json();
+            const transcript = data.results?.channels?.[0]?.alternatives?.[0]?.transcript || "";
+            return processBackendSttResult(transcript);
         } catch (error) {
-            lastBackendSttError = String(error?.message || error || "Unknown STT error");
-            console.warn("Backend STT endpoint failed:", endpoint, error);
+            clearTimeout(timeoutId);
+            const isTimeout = error.name === "AbortError";
+            console.error("Deepgram Direct API failed:", isTimeout ? "Timeout" : error);
+            lastBackendSttError = isTimeout ? "Connection Timeout" : error.message;
+            return false;
         }
     }
-
+    
     return false;
+}
+
+function processBackendSttResult(transcript) {
+    const cleanTranscript = String(transcript).trim();
+    if (!cleanTranscript) return false;
+
+    if (cleanTranscript.length < BACKEND_STT_MIN_TRANSCRIPT_CHARS) {
+        lastBackendSttError = "Empty transcript from STT";
+        return false;
+    }
+
+    const transcriptQuality = estimateTranscriptPassageQuality(cleanTranscript);
+    
+    // Lower threshold for mobile match quality
+    const minRatio = (getPlatformRuntime().mobile) ? 0.05 : BACKEND_STT_MIN_MATCH_RATIO;
+    const minWords = (getPlatformRuntime().mobile) ? 1 : BACKEND_STT_MIN_MATCHED_WORDS;
+
+    if (
+        transcriptQuality.matchedWords < minWords ||
+        transcriptQuality.matchRatio < minRatio
+    ) {
+        lastBackendSttError = `Low transcript overlap (${transcriptQuality.matchedWords} words found)`;
+        return false;
+    }
+
+    applyFinalTranscriptionScoring(cleanTranscript);
+    return true;
+}
+
+/**
+ * Applies the final STT results to the passage and updates the scoreboard.
+ * Fixes the 0 WPM / 0 Accuracy bug by ensuring the final match is counted.
+ */
+function applyFinalTranscriptionScoring(transcript) {
+    console.log("Applying final transcription scoring...");
+    
+    // 1. Mark the words in the passage based on the high-accuracy transcript
+    applyTranscriptToPassage(transcript, {
+        allowErrors: true,
+        confidence: 1
+    });
+
+    // 2. Clear all "loading" or "processing" states
+    isRecording = false;
+
+    // 3. Re-calculate total success count from THE DOM (final truth)
+    totalWordsRead = document.querySelectorAll(".passage-container .read-success").length;
+    
+    // 4. Update the dashboard WITH A SAFETY DELAY for mobile metrics
+    setTimeout(() => {
+        showFluencyResults();
+    }, 500);
 }
 
 function applyTranscriptToPassage(transcript, options = {}) {
@@ -2716,15 +2782,35 @@ function startBackendOnlyRecordingSession() {
     document.getElementById("startReadingBtn").innerText = "🛑 STOP RECORDING";
     document.getElementById("startReadingBtn").style.background = "#c0392b";
 
+    // START STOPWATCH IMMEDIATELY
     startStopwatch();
+
+    // MOBILE FIX: REMOVED Ghost engine to prevent multi-mic conflict
+    // Start background high-accuracy recording only for mobile
     startAudioRecording().then((started) => {
         if (!started && isRecording) {
-            showAppAlert(
-                "Audio recording is not supported on this browser/device, so transcript-based scoring may be unavailable. If live highlights also pause, use a desktop Chrome browser for best results.",
-                "Recording Unavailable"
-            );
+            console.warn("Background audio recording failed to start.");
         }
     });
+
+    // RESTORE LIVE FEEDBACK: Staggered start to prevent browser-level denial
+    setTimeout(() => {
+        if (!isRecording) return;
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (SpeechRecognition) {
+            try {
+                recognition = new SpeechRecognition();
+                recognition.continuous = true;
+                recognition.interimResults = true;
+                recognition.lang = 'en-US';
+                recognition.onresult = handleRecognitionResultEvent;
+                recognition.onerror = (e) => console.warn("Live highlight engine error:", e.error);
+                recognition.start();
+            } catch (e) {
+                console.warn("Could not start live highlighter:", e);
+            }
+        }
+    }, 600); 
 }
 
 function handleRecognitionResultEvent(event) {
@@ -2833,10 +2919,19 @@ function handleRecognitionResultEvent(event) {
     }
 }
 
-async function startFluencyTest() {
+function startFluencyTest() {
     if (!examStarted) {
         showAppAlert("Start Exam first before using Oral Reading & Fluency.", "Exam Not Started");
         return;
+    }
+
+    // Crucial for mobile: Synchronously resume and update UI
+    const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+    if (AudioContextCtor) {
+        if (!audioContext) audioContext = new AudioContextCtor();
+        if (audioContext.state === "suspended") {
+            audioContext.resume().catch(e => console.warn("AudioContext resume failed", e));
+        }
     }
 
     if (isRecording) {
@@ -2844,8 +2939,32 @@ async function startFluencyTest() {
         return;
     }
 
+    const btn = document.getElementById("startReadingBtn");
+    btn.innerText = "⏳ STARTING...";
+    btn.style.background = "#f39c12";
+
+    // Call async portion without 'await' to preserve click context
+    runFluencyTestStartSequence();
+}
+
+async function runFluencyTestStartSequence() {
+    // Safety Fuse for mobile: if mic doesn't respond in 3.5s, reset
+    const safetyFuse = setTimeout(() => {
+        if (!isRecording) {
+            const btn = document.getElementById("startReadingBtn");
+            btn.innerText = "🎤 START READING ALOUD";
+            btn.style.background = "#27ae60";
+            showAppAlert("Microphone took too long to start. Try refreshing or checking browser permissions.", "Connection Timeout");
+        }
+    }, 3500);
+
     const hasMicrophoneAccess = await ensureMicrophonePermission();
+    clearTimeout(safetyFuse);
+
     if (!hasMicrophoneAccess) {
+        const btn = document.getElementById("startReadingBtn");
+        btn.innerText = "🎤 START READING ALOUD";
+        btn.style.background = "#27ae60";
         return;
     }
 
@@ -2853,7 +2972,11 @@ async function startFluencyTest() {
     speechRecognitionCtor = SpeechRecognition || null;
     bindSpeechRecoveryHandlers();
 
-    if (USE_BACKEND_STT_MODE) {
+    const runtime = getPlatformRuntime();
+    // Use Deepgram for Mobile, Native for Desktop
+    const forceBackendMode = runtime.mobile;
+
+    if (USE_BACKEND_STT_MODE && forceBackendMode) {
         startBackendOnlyRecordingSession();
 
         if (SpeechRecognition) {
@@ -3387,8 +3510,8 @@ async function stopFluencyTest() {
             recognition.onend = null;
             recognition.onerror = null;
 
-            recognition.abort(); 
-        } catch (e) {}
+            recognition.abort();
+        } catch (e) { }
 
         recognition = null;
     }
@@ -3409,7 +3532,8 @@ async function stopFluencyTest() {
     stopStrictNoiseMonitor();
 
     const recordedAudioBlob = await stopAudioRecordingAndGetBlob();
-    let backendSttApplied = false;
+    document.getElementById("startReadingBtn").innerText = "⏳ PROCESSING...";
+    document.getElementById("startReadingBtn").style.background = "#f39c12";
 
     if (recordedAudioBlob) {
         backendSttApplied = await applyBackendSttTranscription(recordedAudioBlob, {
@@ -3418,14 +3542,14 @@ async function stopFluencyTest() {
     }
 
     if (USE_BACKEND_STT_MODE && !backendSttApplied) {
-        if (lastBackendSttError.startsWith("Low transcript overlap")) {
+        if (lastBackendSttError && lastBackendSttError.startsWith("Low transcript overlap")) {
             showAppAlert(
                 "Backend transcript quality was too low, so the system kept your live reading result.",
                 "Using Live Result"
             );
-        } else {
+        } else if (lastBackendSttError) {
             showAppAlert(
-                `Could not transcribe audio from backend STT. ${lastBackendSttError || "Check API key and function logs."}`,
+                `Could not transcribe audio from backend STT. ${lastBackendSttError}`,
                 "Transcription Unavailable"
             );
         }
@@ -3527,7 +3651,7 @@ async function startStudentAttemptRecord(studentName, level, passageTitle) {
     try {
         const db = firebase.firestore();
         const normalizedName = String(studentName || "").trim().toLowerCase();
-        
+
         if (!normalizedName) return null;
 
         // Ensure student exists
@@ -3588,14 +3712,14 @@ function buildQuizHtml(data) {
             <div class="question-item">
                 <span class="question-text">${displayQuestionNumber}. ${item.q}</span>
                 ${item.options.map((opt, oIdx) => {
-    const letter = String.fromCharCode(65 + oIdx);
-    return `
+            const letter = String.fromCharCode(65 + oIdx);
+            return `
         <label class="option-label">
             <input type="radio" name="q${qIdx}" value="${oIdx}">
             <strong>${letter}.</strong> ${opt}
         </label>
     `;
-}).join("")}
+        }).join("")}
             </div>
         `;
     });
@@ -3900,6 +4024,13 @@ async function loadPreviousPassage() {
 }
 
 async function loadPassage(isNextRequest = false) {
+    // Pre-warm AudioContext on user gesture
+    const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+    if (AudioContextCtor && !audioContext) {
+        audioContext = new AudioContextCtor();
+    }
+
+    const studentName = document.getElementById("studentName").value.trim();
     currentLevel = document.getElementById("level").value;
     const levelData = assessmentData[currentLevel];
 
@@ -4056,7 +4187,7 @@ async function updateHistoryTable() {
                 </tr>
             `;
         }).join("");
-        
+
         historyBodyEl.innerHTML = html || '<tr><td colspan="4">No records found.</td></tr>';
     } catch (error) {
         console.error("Error fetching history from Firestore:", error);

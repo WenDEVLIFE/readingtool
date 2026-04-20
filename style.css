@@ -587,6 +587,7 @@ body {
     padding: 0; /* Padding handled by internal elements */
     overflow: visible;
     position: relative;
+    min-height: 300px; /* Protect from collapsing on mobile */
 }
 
 .sticky-header {
@@ -814,13 +815,19 @@ body {
 }
 
 .btn-voice {
-    background: var(--secondary); /* Changed from primary to secondary */
+    background: var(--secondary);
     color: white; 
     border: none;
-    padding: 10px 20px;
-    border-radius: 5px;
+    padding: 12px 24px;
+    border-radius: 8px;
     cursor: pointer;
     font-weight: bold;
+    min-height: 54px; /* Fix for squashed button on mobile */
+    font-size: 1.1rem !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
 }
 
 .btn-voice:hover {

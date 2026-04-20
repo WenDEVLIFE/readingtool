@@ -1,43 +1,42 @@
 # WordHarbor Reading Tool Skills
 
-This document outlines the technical capabilities and features of the WordHarbor Reading Tool, integrated with Firebase.
+This document outlines the technical capabilities and features of the WordHarbor Reading Tool, integrated with a Hybrid Speech Architecture and Firebase.
+
+## Hybrid Speech Engine
+
+To ensure the best performance across all devices without requiring a Firebase Blaze (billing) plan, WordHarbor uses a **Hybrid Staggered Transcription System**:
+
+- **Desktop (PC/Laptop)**: Uses **Native Web Speech API** (`webkitSpeechRecognition`). This is free, fast, and highly reliable on Desktop Chrome.
+- **Mobile (Android/iOS)**: Uses the **Deepgram Direct API** (Nova-3 model). This provides professional-grade accuracy for mobile browsers where native speech recognition can be flaky.
+
+### Technical Implementation
+- **Detection**: Automatically detects device type using `getPlatformRuntime()`.
+- **Direct Integration**: Calls Deepgram directly from the browser to bypass serverless function requirements.
+- **Microphone Support**: Explicitly handles `AudioContext` lifecycle for mobile compatibility.
 
 ## Core Features
 
 - **Fluency Assessment**: Real-time speech recognition and analysis of reading accuracy, WPM (Words Per Minute), and hesitation patterns.
 - **Comprehension Testing**: Interactive quizzes linked to specific reading passages to evaluate understanding.
-- **Teacher Dashboard**: Centralized view for teachers to monitor student progress, review historical exam data, and manage accounts.
+- **Teacher Dashboard**: Centralized view for teachers to monitor student progress and review historical data.
 
-## AI & Technical Integrations
+## Infrastructure
 
-- **Speech-to-Text (STT)**: 
-  - Integrated via **Firebase Cloud Functions** with **Deepgram Nova-3** and **OpenAI Whisper**.
-  - Optimized for multi-language detection and punctuation accuracy.
-- **Pronunciation Assessment**: 
-  - Integrated via **Firebase Cloud Functions** with **Azure AI Speech** for detailed phoneme-level feedback.
-- **Firebase Infrastructure**:
-  - **Firebase Auth**: Secure teacher login and registration (formerly SQL-based).
-  - **Cloud Firestore**: Real-time data storage replacing legacy SQL tables.
-    - `teachers`: Collection for teacher identity and metadata.
-    - `students`: Collection for student profiles (using normalized names as IDs).
-    - `attempts`: Collection for all exam results and performance metrics.
-  - **Firebase Hosting**: Static asset delivery with logic-mapped rewrites.
+- **Firebase Hosting**: High-performance delivery of all static assets.
+- **Firebase Auth**: Secure teacher authentication.
+- **Cloud Firestore**: Real-time database for:
+    - `teachers`: Teacher profiles.
+    - `students`: Centralized student registry.
+    - `attempts`: Detailed exam results and speech metrics.
 
-## Deployment Credentials
+## API Configuration
 
-The project is linked to the Firebase Project: `readingtool-b2124`.
+Current project is configured with the following credentials:
 
 ```javascript
+const DEEPGRAM_API_KEY = "bf322035aa3f2ced5cc4dfb26579846b2ce1f91d";
 const firebaseConfig = {
-  apiKey: "AIzaSyB0l6qT-z56eQUMQgW6CbNbYwB1ZJmMzOk",
-  authDomain: "readingtool-b2124.firebaseapp.com",
   projectId: "readingtool-b2124",
-  storageBucket: "readingtool-b2124.firebasestorage.app",
-  messagingSenderId: "981193866014",
-  appId: "1:981193866014:web:7460f57861256cceb4270f",
-  measurementId: "G-X7Y8622DZJ"
+  // ... other credentials in index.html
 };
 ```
-
-## Migration Notes
-All functions previously inserting into SQL (Supabase) have been replaced by direct client-side Firestore operations or Firebase Cloud Functions where secure API keys are required.
