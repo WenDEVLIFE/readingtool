@@ -410,6 +410,7 @@ let lastBackendSttError = "";
 let mobileLiveBackendHandle = null;
 let mobileLiveBackendInFlight = false;
 let mobileLiveBackendLastTranscript = "";
+let mobileRecorderFlushHandle = null;
 let mobileStallWordIndex = -1;
 let mobileStallFinalMissCount = 0;
 let lastHesitationMarkedIndex = -1;
@@ -1913,6 +1914,9 @@ const USE_BACKEND_STT_MODE = true;
 const MOBILE_STREAM_TIMESLICE_FAST_MS = 50;
 const MOBILE_STREAM_TIMESLICE_STABLE_MS = 80;
 const MOBILE_STREAM_STALL_THRESHOLD_MS = 2600;
+const MOBILE_LIVE_PREVIEW_INTERVAL_MS = 900;
+const MOBILE_LIVE_PREVIEW_MIN_BYTES = 6000;
+const MOBILE_LIVE_TRANSCRIPT_TAIL_WORDS = 4;
 const DEEPGRAM_API_KEY = "bf322035aa3f2ced5cc4dfb26579846b2ce1f91d";
 const BROWSER_RECOGNITION_LANG = "en-US";
 const BACKEND_STT_LANGUAGE = "en-US";
@@ -2246,6 +2250,21 @@ async function startAudioRecording() {
             }
         };
 
+        if (mobileRecorderFlushHandle) {
+            clearInterval(mobileRecorderFlushHandle);
+            mobileRecorderFlushHandle = null;
+        }
+
+        if (runtime.mobile && typeof mediaRecorder.requestData === "function") {
+            mobileRecorderFlushHandle = setInterval(() => {
+                if (mediaRecorder && mediaRecorder.state === "recording") {
+                    try {
+                        mediaRecorder.requestData();
+                    } catch { }
+                }
+            }, 140);
+        }
+
         mediaRecorder.start(mobileRecorderTimesliceMs);
         startStrictNoiseMonitor();
         return true;
@@ -2377,6 +2396,10 @@ function advanceWordFromStrictNoise() {
 function stopAudioRecordingAndGetBlob() {
     return new Promise((resolve) => {
         if (!mediaRecorder) {
+            if (mobileRecorderFlushHandle) {
+                clearInterval(mobileRecorderFlushHandle);
+                mobileRecorderFlushHandle = null;
+            }
             resolve(null);
             return;
         }
@@ -2388,6 +2411,11 @@ function stopAudioRecordingAndGetBlob() {
                 : null;
 
             recordedAudioChunks = [];
+
+            if (mobileRecorderFlushHandle) {
+                clearInterval(mobileRecorderFlushHandle);
+                mobileRecorderFlushHandle = null;
+            }
 
             if (mediaStream) {
                 mediaStream.getTracks().forEach(track => track.stop());
@@ -2571,13 +2599,13 @@ function startMobileBackendLivePreview() {
             }
         }
 
-        if (!recordedAudioChunks || recordedAudioChunks.length < 4) {
+        if (!recordedAudioChunks || recordedAudioChunks.length < 2) {
             return;
         }
 
         const sampleMime = recordedAudioMimeType || "audio/webm";
         const snapshotBlob = new Blob(recordedAudioChunks, { type: sampleMime });
-        if (snapshotBlob.size < 12000) {
+        if (snapshotBlob.size < MOBILE_LIVE_PREVIEW_MIN_BYTES) {
             return;
         }
 
@@ -2589,7 +2617,7 @@ function startMobileBackendLivePreview() {
         } finally {
             mobileLiveBackendInFlight = false;
         }
-    }, 2800);
+    }, MOBILE_LIVE_PREVIEW_INTERVAL_MS);
 }
 
 function stopMobileBackendLivePreview() {
@@ -4460,7 +4488,7 @@ function initDeepgramLiveStream() {
                     delta = lower.slice(cursor.length).trim();
                 } else if (cursor) {
                     // Deepgram sometimes rewrites earlier words; use a short tail so live highlight can keep moving.
-                    const tailWords = lower.split(/\s+/).filter(Boolean).slice(-8);
+                    const tailWords = lower.split(/\s+/).filter(Boolean).slice(-MOBILE_LIVE_TRANSCRIPT_TAIL_WORDS);
                     delta = tailWords.join(" ");
                 }
 

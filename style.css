@@ -200,6 +200,27 @@ body {
     overflow: auto;
 }
 
+.teacher-delete-btn {
+    background: #c0392b;
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    letter-spacing: 0.5px;
+    min-width: 84px;
+    box-shadow: 0 4px 10px rgba(192, 57, 43, 0.2);
+}
+
+.teacher-delete-btn:hover {
+    background: #a83226;
+}
+
+.teacher-results-section table th:first-child,
+.teacher-results-section table td:first-child {
+    white-space: nowrap;
+    text-align: center;
+}
+
 .auth-headline {
     margin: 0;
     color: var(--primary);

@@ -7,7 +7,10 @@ const {
   hashPassword,
   findTeacherByEmail,
   insertTeacherAccount,
+  countTableRows,
 } = require("./_teacher-auth-utils");
+
+const MAX_TEACHER_ACCOUNTS = 15;
 
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") {
@@ -44,6 +47,14 @@ exports.handler = async (event) => {
   }
 
   try {
+    const teacherCount = await countTableRows("teacher_accounts");
+    if (teacherCount >= MAX_TEACHER_ACCOUNTS) {
+      return json(429, {
+        ok: false,
+        error: `Teacher registration limit reached (${MAX_TEACHER_ACCOUNTS} accounts max)`,
+      });
+    }
+
     const existing = await findTeacherByEmail(email);
     if (existing) {
       return json(409, { ok: false, error: "Teacher account already exists for this email" });

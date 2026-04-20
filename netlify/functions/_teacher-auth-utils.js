@@ -184,6 +184,31 @@ async function supabaseRequest(path, { method = "GET", body } = {}) {
   return response.json();
 }
 
+async function countTableRows(tableName) {
+  const config = getSupabaseConfig();
+  if (!config) {
+    throw new Error("Supabase credentials are not configured");
+  }
+
+  const response = await fetch(`${config.url}/rest/v1/${tableName}?select=id&limit=1`, {
+    method: "GET",
+    headers: {
+      apikey: config.serviceKey,
+      Authorization: `Bearer ${config.serviceKey}`,
+      Prefer: "count=exact",
+    },
+  });
+
+  if (!response.ok) {
+    const details = await response.text();
+    throw new Error(`Supabase count error ${response.status}: ${details}`);
+  }
+
+  const contentRange = String(response.headers.get("content-range") || "");
+  const match = contentRange.match(/\/(\d+)$/);
+  return match ? Number(match[1]) : 0;
+}
+
 async function findTeacherByEmail(email) {
   const query = new URLSearchParams({
     select: "id,email,full_name,password_hash,password_salt,created_at",
@@ -230,4 +255,5 @@ module.exports = {
   requireTeacherAuth,
   findTeacherByEmail,
   insertTeacherAccount,
+  countTableRows,
 };

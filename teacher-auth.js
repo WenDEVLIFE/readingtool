@@ -23,6 +23,16 @@ const teacherResultsSection = document.getElementById("teacherResultsSection");
 const teacherResultsStatus = document.getElementById("teacherResultsStatus");
 const teacherResultsBody = document.getElementById("teacherResultsBody");
 const refreshTeacherResultsBtn = document.getElementById("refreshTeacherResultsBtn");
+const MAX_TEACHER_ACCOUNTS = 15;
+
+function escapeHtml(value) {
+    return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
 
 // Firebase Auth State Observer
 firebase.auth().onAuthStateChanged((user) => {
@@ -110,7 +120,7 @@ function renderTeacherResults(items) {
     if (!teacherResultsBody) return;
 
     if (!Array.isArray(items) || !items.length) {
-        teacherResultsBody.innerHTML = `<tr><td colspan="6">No results yet.</td></tr>`;
+        teacherResultsBody.innerHTML = `<tr><td colspan="7">No results yet.</td></tr>`;
         return;
     }
 
@@ -121,16 +131,44 @@ function renderTeacherResults(items) {
 
             return `
                 <tr>
+                    <td>
+                        <button type="button" class="btn-start teacher-delete-btn" data-attempt-id="${escapeHtml(item.id)}">
+                            Delete
+                        </button>
+                    </td>
                     <td>${formatDateTime(item.completedAt || item.createdAt)}</td>
-                    <td>${item.studentName || "-"}</td>
-                    <td>${item.level || "-"}</td>
-                    <td>${item.passageTitle || "-"}</td>
+                    <td>${escapeHtml(item.studentName || "-")}</td>
+                    <td>${escapeHtml(item.level || "-")}</td>
+                    <td>${escapeHtml(item.passageTitle || "-")}</td>
                     <td>${fluencyText}</td>
                     <td>${compText}</td>
                 </tr>
             `;
         })
         .join("");
+}
+
+async function deleteTeacherResult(attemptId) {
+    const user = firebase.auth().currentUser;
+    if (!user) {
+        showResultsStatus("You must be logged in to delete results.", "error");
+        return;
+    }
+
+    const confirmed = window.confirm("Delete this student result permanently?");
+    if (!confirmed) return;
+
+    showResultsStatus("Deleting result...", "info");
+
+    try {
+        const db = firebase.firestore();
+        await db.collection("attempts").doc(attemptId).delete();
+        showResultsStatus("Result deleted.", "success");
+        await loadTeacherResults();
+    } catch (error) {
+        console.error("Firestore delete error:", error);
+        showResultsStatus(String(error?.message || error || "Failed to delete result"), "error");
+    }
 }
 
 async function loadTeacherResults() {
@@ -185,6 +223,14 @@ function renderSessionCard(session) {
     loadTeacherResults();
 }
 
+if (teacherResultsBody) {
+    teacherResultsBody.addEventListener("click", (event) => {
+        const button = event.target.closest("button[data-attempt-id]");
+        if (!button) return;
+        deleteTeacherResult(button.dataset.attemptId);
+    });
+}
+
 async function processAuth(mode) {
     setAuthMode(mode);
     clearStatus();
@@ -215,13 +261,19 @@ async function processAuth(mode) {
 
     try {
         if (mode === AUTH_MODE_REGISTER) {
+            const db = firebase.firestore();
+            const teacherSnapshot = await db.collection("teachers").get();
+            if (teacherSnapshot.size >= MAX_TEACHER_ACCOUNTS) {
+                showStatus(`Teacher registration limit reached (${MAX_TEACHER_ACCOUNTS} accounts max).`, "error");
+                return;
+            }
+
             const userCredential = await firebase.auth().createUserWithEmailAndPassword(email, password);
             await userCredential.user.updateProfile({
                 displayName: fullName
             });
             
             // Save teacher metadata to Firestore
-            const db = firebase.firestore();
             await db.collection("teachers").doc(userCredential.user.uid).set({
                 fullName: fullName,
                 email: email,
