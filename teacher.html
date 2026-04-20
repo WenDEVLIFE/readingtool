@@ -103,9 +103,26 @@
         </div>
     </div>
 
+    <!-- Firebase App (the core Firebase SDK) -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <!-- Firebase Auth and Firestore -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+
     <script>
-        // Optional: override API base if you want a different deployment endpoint.
-        // window.TEACHER_API_BASE = "https://your-site.netlify.app";
+        // Your web app's Firebase configuration
+        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+        const firebaseConfig = window.FIREBASE_CONFIG || {
+            apiKey: "AIzaSyB0l6qT-z56eQUMQgW6CbNbYwB1ZJmMzOk",
+            authDomain: "readingtool-b2124.firebaseapp.com",
+            projectId: "readingtool-b2124",
+            storageBucket: "readingtool-b2124.firebasestorage.app",
+            messagingSenderId: "981193866014",
+            appId: "1:981193866014:web:7460f57861256cceb4270f",
+            measurementId: "G-X7Y8622DZJ"
+        };
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
     </script>
     <script src="teacher-auth.js"></script>
 </body>

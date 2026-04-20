@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,16 +9,17 @@
     <link rel="apple-touch-icon" href="harbor.jpg">
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
     <div class="main-card">
         <header class="header-banner">
-    <div class="header-content">
-        <img src="harbor.jpg" alt="WordHarbor Logo" class="site-logo">
-        <h1>WordHarbor</h1>
-    </div>
-    <p style="text-align:center; margin-top:5px;">Anchoring Knowledge Through Reading</p>
-</header>
+            <div class="header-content">
+                <img src="harbor.jpg" alt="WordHarbor Logo" class="site-logo">
+                <h1>WordHarbor</h1>
+            </div>
+            <p style="text-align:center; margin-top:5px;">Anchoring Knowledge Through Reading</p>
+        </header>
 
         <div class="content-body">
             <section class="registration-area" id="inputContainer">
@@ -46,7 +48,8 @@
             <section class="quick-links-panel" id="assessmentPagesPanel" style="display: none;">
                 <h3>Assessment Pages</h3>
                 <div class="quick-links-actions">
-                    <button id="openComprehensionBtn" class="btn-start assessment-cta-btn" type="button" onclick="window.location.href='comprehension.html'">
+                    <button id="openComprehensionBtn" class="btn-start assessment-cta-btn" type="button"
+                        onclick="window.location.href='comprehension.html'">
                         View Comprehension Score
                     </button>
                     <button class="btn-start" type="button" onclick="window.location.href='history.html'">
@@ -57,92 +60,118 @@
 
             <div class="assessment-grid" id="examArea" style="display: none;">
                 <div class="passage-container">
-    <div class="sticky-header">Accuracy Score</div>
-    <h2 id="passageTitle">Select a Level</h2>
-    
-    <div id="passageText" class="text-content">
-        Please enter your details and click 'Start Exam' to load the passage.
-    </div>
+                    <div class="sticky-header">Accuracy Score</div>
+                    <h2 id="passageTitle">Select a Level</h2>
 
-    <div class="voice-module">
-        <button id="startReadingBtn" class="btn-voice" onclick="startFluencyTest()" disabled>
-            🎤 START READING ALOUD
-        </button>
-        <div class="timer-box">
-            Stopwatch: <span id="seconds">00:00</span>
-        </div>
-        
-        <div class="legend-container">
-            <span class="badge red">Substitution</span>
-            <span class="badge yellow">Omission</span>
-            <span class="badge orange">Addition/5s Wait</span>
-            <span class="badge blue">Mispronunciation</span>
-        </div>
-    </div>
-</div>
-<div id="quizArea"></div>
+                    <div id="passageText" class="text-content">
+                        Please enter your details and click 'Start Exam' to load the passage.
+                    </div>
 
-<div class="passage-nav-controls">
-    <button class="btn-start" type="button" onclick="loadPreviousPassage()">
-        ⬅️ BACK
-    </button>
-    <div id="passageIndicator" class="passage-indicator" style="display: none;"></div>
-    <button class="btn-start" type="button" onclick="loadPassage(true)">
-        ➡️ NEXT PASSAGE
-    </button>
-</div>
-<button id="submitBtn" class="btn-submit" onclick="checkAnswers()" style="display:none;">
-    📊 Submit Answers
-</button>
-        </div>
-    </div>
+                    <div class="voice-module">
+                        <button id="startReadingBtn" class="btn-voice" onclick="startFluencyTest()" disabled>
+                            🎤 START READING ALOUD
+                        </button>
+                        <div class="timer-box">
+                            Stopwatch: <span id="seconds">00:00</span>
+                        </div>
 
-    <div id="appAlert" class="app-alert" aria-hidden="true">
-        <div class="app-alert-backdrop" onclick="closeAppAlert()"></div>
-        <div class="app-alert-dialog" role="dialog" aria-modal="true" aria-labelledby="appAlertTitle">
-            <h3 id="appAlertTitle">Notice</h3>
-            <p id="appAlertMessage"></p>
-            <button class="btn-start" type="button" onclick="closeAppAlert()">OK</button>
-        </div>
-    </div>
+                        <div class="legend-container">
+                            <span class="badge red">Substitution</span>
+                            <span class="badge yellow">Omission</span>
+                            <span class="badge orange">Addition/5s Wait</span>
+                            <span class="badge blue">Mispronunciation</span>
+                        </div>
+                    </div>
+                </div>
+                <div id="quizArea"></div>
 
-    <button id="decisionDebugLauncher" class="decision-debug-launcher" type="button" aria-label="Toggle decision debug panel">
-        Debug
-    </button>
-    <section id="decisionDebugPanel" class="decision-debug-panel" aria-live="polite" aria-label="Decision debug panel">
-        <div class="decision-debug-header">
-            <strong>Decision Trace</strong>
-            <div class="decision-debug-actions">
-                <button id="decisionDebugEnableBtn" type="button">Enable</button>
-                <button id="decisionDebugClearBtn" type="button">Clear</button>
-                <button id="decisionDebugCloseBtn" type="button">Close</button>
+                <div class="passage-nav-controls">
+                    <button class="btn-start" type="button" onclick="loadPreviousPassage()">
+                        ⬅️ BACK
+                    </button>
+                    <div id="passageIndicator" class="passage-indicator" style="display: none;"></div>
+                    <button class="btn-start" type="button" onclick="loadPassage(true)">
+                        ➡️ NEXT PASSAGE
+                    </button>
+                </div>
+                <button id="submitBtn" class="btn-submit" onclick="checkAnswers()" style="display:none;">
+                    📊 Submit Answers
+                </button>
             </div>
         </div>
-        <div class="decision-debug-status" id="decisionDebugStatus">Logger OFF</div>
-        <div class="decision-debug-filters" id="decisionDebugFilters" role="group" aria-label="Decision event filters">
-            <button type="button" data-filter="all" class="is-active">All</button>
-            <button type="button" data-filter="live">Live</button>
-            <button type="button" data-filter="detailed">Detailed</button>
-            <button type="button" data-filter="end">End</button>
-        </div>
-        <ul id="decisionDebugList" class="decision-debug-list"></ul>
-    </section>
 
-    <script src="platform-speech-strategy.js"></script>
-    <script src="platform-speech-adapter.js"></script>
-    <script src="platform-recognition-lifecycle.js"></script>
-    <script src="platform-recognition-restart-policy.js"></script>
-    <script src="ios-readaloud-flow.js"></script>
-    <script src="android-readaloud-flow.js"></script>
-    <script src="transcript-matching-engine.js"></script>
-    <script src="speech-state-mutations.js"></script>
-    <script src="speech-transition-helpers.js"></script>
-    <script src="speech-callback-actions.js"></script>
-    <script src="speech-error-classifier.js"></script>
-    <script src="decision-debug-logger.js"></script>
-    <script src="live-progress-rules.js"></script>
-    <script src="detailed-matching-rules.js"></script>
-    <script src="voice-input-end-evaluator.js"></script>
-    <script src="script.js"></script>
+        <div id="appAlert" class="app-alert" aria-hidden="true">
+            <div class="app-alert-backdrop" onclick="closeAppAlert()"></div>
+            <div class="app-alert-dialog" role="dialog" aria-modal="true" aria-labelledby="appAlertTitle">
+                <h3 id="appAlertTitle">Notice</h3>
+                <p id="appAlertMessage"></p>
+                <button class="btn-start" type="button" onclick="closeAppAlert()">OK</button>
+            </div>
+        </div>
+
+        <button id="decisionDebugLauncher" class="decision-debug-launcher" type="button"
+            aria-label="Toggle decision debug panel">
+            Debug
+        </button>
+        <section id="decisionDebugPanel" class="decision-debug-panel" aria-live="polite"
+            aria-label="Decision debug panel">
+            <div class="decision-debug-header">
+                <strong>Decision Trace</strong>
+                <div class="decision-debug-actions">
+                    <button id="decisionDebugEnableBtn" type="button">Enable</button>
+                    <button id="decisionDebugClearBtn" type="button">Clear</button>
+                    <button id="decisionDebugCloseBtn" type="button">Close</button>
+                </div>
+            </div>
+            <div class="decision-debug-status" id="decisionDebugStatus">Logger OFF</div>
+            <div class="decision-debug-filters" id="decisionDebugFilters" role="group"
+                aria-label="Decision event filters">
+                <button type="button" data-filter="all" class="is-active">All</button>
+                <button type="button" data-filter="live">Live</button>
+                <button type="button" data-filter="detailed">Detailed</button>
+                <button type="button" data-filter="end">End</button>
+            </div>
+            <ul id="decisionDebugList" class="decision-debug-list"></ul>
+        </section>
+
+        <script src="platform-speech-strategy.js"></script>
+        <script src="platform-speech-adapter.js"></script>
+        <script src="platform-recognition-lifecycle.js"></script>
+        <script src="platform-recognition-restart-policy.js"></script>
+        <script src="ios-readaloud-flow.js"></script>
+        <script src="android-readaloud-flow.js"></script>
+        <script src="transcript-matching-engine.js"></script>
+        <script src="speech-state-mutations.js"></script>
+        <script src="speech-transition-helpers.js"></script>
+        <script src="speech-callback-actions.js"></script>
+        <script src="speech-error-classifier.js"></script>
+        <script src="decision-debug-logger.js"></script>
+        <script src="live-progress-rules.js"></script>
+        <script src="detailed-matching-rules.js"></script>
+        <script src="voice-input-end-evaluator.js"></script>
+        <!-- Firebase App (the core Firebase SDK) -->
+        <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+        <!-- Firebase Auth and Firestore -->
+        <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+
+        <script>
+            // Your web app's Firebase configuration
+            const firebaseConfig = window.FIREBASE_CONFIG || {
+                apiKey: "AIzaSyB0l6qT-z56eQUMQgW6CbNbYwB1ZJmMzOk",
+                authDomain: "readingtool-b2124.firebaseapp.com",
+                projectId: "readingtool-b2124",
+                storageBucket: "readingtool-b2124.firebasestorage.app",
+                messagingSenderId: "981193866014",
+                appId: "1:981193866014:web:7460f57861256cceb4270f",
+                measurementId: "G-X7Y8622DZJ"
+            };
+            // Initialize Firebase
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
+        </script>
+        <script src="script.js"></script>
 </body>
+
 </html>

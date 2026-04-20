@@ -3524,33 +3524,59 @@ async function requestExamJson(url, payload) {
 }
 
 async function startStudentAttemptRecord(studentName, level, passageTitle) {
-    const result = await requestExamJson(
-        buildExamFunctionUrl("/.netlify/functions/student-attempt-start"),
-        {
-            studentName,
-            level,
-            passageTitle
-        }
-    );
+    try {
+        const db = firebase.firestore();
+        const normalizedName = String(studentName || "").trim().toLowerCase();
+        
+        if (!normalizedName) return null;
 
-    return Number(result?.attempt?.id || 0) || null;
+        // Ensure student exists
+        const studentRef = db.collection("students").doc(normalizedName);
+        await studentRef.set({
+            fullName: studentName,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+
+        // Create attempt
+        const attemptRef = await db.collection("attempts").add({
+            studentId: normalizedName,
+            studentName: studentName,
+            level: level,
+            passageTitle: passageTitle,
+            fluencyWordsRead: 0,
+            fluencyTotalWords: 0,
+            wpm: 0,
+            accuracyPercent: 0,
+            comprehensionScore: 0,
+            comprehensionTotal: 0,
+            startedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        return attemptRef.id;
+    } catch (error) {
+        console.error("Firestore Error in startStudentAttemptRecord:", error);
+        return null;
+    }
 }
 
 async function completeStudentAttemptRecord(attemptId, comprehensionScore, comprehensionTotal) {
     if (!attemptId) return;
 
-    await requestExamJson(
-        buildExamFunctionUrl("/.netlify/functions/student-attempt-complete"),
-        {
-            attemptId,
+    try {
+        const db = firebase.firestore();
+        await db.collection("attempts").doc(attemptId).update({
             fluencyWordsRead: currentFluencyMetrics.wordsRead,
             fluencyTotalWords: currentFluencyMetrics.totalWords,
             wpm: currentFluencyMetrics.wpm,
             accuracyPercent: currentFluencyMetrics.accuracyPercent,
             comprehensionScore,
-            comprehensionTotal
-        }
-    );
+            comprehensionTotal,
+            completedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+    } catch (error) {
+        console.error("Firestore Error in completeStudentAttemptRecord:", error);
+    }
 }
 
 function buildQuizHtml(data) {
@@ -4006,20 +4032,36 @@ function saveScore() {
     showAppAlert("Record saved to history!", "Success");
 }
 
-function updateHistoryTable() {
-    const history = JSON.parse(localStorage.getItem("cellsHistory")) || [];
+async function updateHistoryTable() {
     const historyBodyEl = document.getElementById("historyBody");
     if (!historyBodyEl) return;
 
-    const html = history.map(item => `
-        <tr>
-            <td>${item.date}</td>
-            <td>${item.name}</td>
-            <td>${item.level}</td>
-            <td>${item.score}</td>
-        </tr>
-    `).join("");
-    historyBodyEl.innerHTML = html;
+    try {
+        const db = firebase.firestore();
+        const snapshot = await db.collection("attempts")
+            .orderBy("createdAt", "desc")
+            .limit(50)
+            .get();
+
+        const html = snapshot.docs.map(doc => {
+            const item = doc.data();
+            const dateStr = item.createdAt ? (item.createdAt.toDate ? item.createdAt.toDate() : new Date(item.createdAt)).toLocaleString() : "-";
+            const score = `${item.comprehensionScore || 0}/${item.comprehensionTotal || 0}`;
+            return `
+                <tr>
+                    <td>${dateStr}</td>
+                    <td>${item.studentName || "-"}</td>
+                    <td>${item.level || "-"}</td>
+                    <td>${score}</td>
+                </tr>
+            `;
+        }).join("");
+        
+        historyBodyEl.innerHTML = html || '<tr><td colspan="4">No records found.</td></tr>';
+    } catch (error) {
+        console.error("Error fetching history from Firestore:", error);
+        historyBodyEl.innerHTML = '<tr><td colspan="4">Error loading history from cloud.</td></tr>';
+    }
 }
 
 window.onload = async () => {

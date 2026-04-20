@@ -1,0 +1,28 @@
+{
+  "hosting": {
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      "netlify/**",
+      "netlify.toml",
+      "functions/**",
+      ".agents/**",
+      "database/**"
+    ],
+    "rewrites": [
+      {
+        "source": "/.netlify/functions/stt-transcribe",
+        "function": "sttTranscribe"
+      },
+      {
+        "source": "/.netlify/functions/azure-pronunciation-assessment",
+        "function": "azurePronunciationAssessment"
+      }
+    ]
+  },
+  "functions": {
+    "source": "functions"
+  }
+}

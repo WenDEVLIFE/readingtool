@@ -1,0 +1,23 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Teacher metadata: Only the teacher themselves can read/write their own metadata
+    match /teachers/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Students: Anyone can read/write (for student registration)
+    // In a production app, you might want more restriction
+    match /students/{studentId} {
+      allow read, write: if true;
+    }
+    
+    // Attempts: Anyone can create/update (for students), 
+    // but only authenticated teachers should probably list all of them
+    match /attempts/{attemptId} {
+      allow create: if true;
+      allow update: if true; // Allow students to complete attempts
+      allow read: if true; // Allow students to see history, or restrict to teachers if preferred
+    }
+  }
+}
