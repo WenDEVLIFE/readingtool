@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Portal | WordHarbor</title>
+    <link rel="icon" type="image/jpeg" href="harbor.jpg">
+    <link rel="apple-touch-icon" href="harbor.jpg">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="main-card auth-shell">
+        <header class="header-banner">
+            <div class="header-content">
+                <img src="harbor.jpg" alt="WordHarbor Logo" class="site-logo">
+                <h1>Teacher Portal</h1>
+            </div>
+            <p style="text-align:center; margin-top:5px;">Secure access for teacher accounts</p>
+        </header>
+
+        <div class="content-body">
+            <section id="teacherAuthView" class="auth-card teacher-auth-view" aria-labelledby="authTitle">
+                    <h2 id="authTitle" class="auth-headline">Login or Create Teacher Account</h2>
+                    <p class="auth-subtitle">
+                        Use this page to register a teacher account and login. Credentials are saved through a Netlify Function into your configured database.
+                    </p>
+
+                    <form id="teacherAuthForm" class="auth-form">
+                        <div class="field" id="teacherNameField" style="display: none;">
+                            <label for="teacherName">Teacher Name</label>
+                            <input type="text" id="teacherName" placeholder="Last Name, First Name" autocomplete="name">
+                        </div>
+
+                        <div class="field">
+                            <label for="teacherEmail">Email</label>
+                            <input type="email" id="teacherEmail" placeholder="teacher@email.com" autocomplete="email" required>
+                        </div>
+
+                        <div class="field">
+                            <label for="teacherPassword">Password</label>
+                            <div class="password-input-wrap">
+                                <input type="password" id="teacherPassword" placeholder="At least 8 characters" autocomplete="current-password" required>
+                                <button
+                                    id="toggleTeacherPassword"
+                                    class="password-toggle-btn"
+                                    type="button"
+                                    aria-label="Show password"
+                                    title="Show password"
+                                >
+                                    <span aria-hidden="true">&#128065;</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="auth-actions">
+                            <button id="loginBtn" class="btn-start" type="submit">Login</button>
+                            <button id="createAccountBtn" class="btn-start btn-secondary" type="button">Create Account</button>
+                        </div>
+                    </form>
+
+                    <div id="authStatus" class="auth-status" aria-live="polite"></div>
+
+            </section>
+
+            <section id="teacherResultsView" class="teacher-results-view" style="display: none;">
+                <div id="teacherSessionCard" class="teacher-session-card">
+                    <p><strong>Logged in as:</strong> <span id="sessionTeacherName">-</span></p>
+                    <p><strong>Email:</strong> <span id="sessionTeacherEmail">-</span></p>
+                </div>
+
+                <section id="teacherResultsSection" class="teacher-results-section teacher-results-panel">
+                    <div class="teacher-results-header-row">
+                        <h3>Student Exam Results</h3>
+                        <button id="refreshTeacherResultsBtn" class="btn-start btn-secondary" type="button">Refresh</button>
+                    </div>
+                    <div id="teacherResultsStatus" class="auth-status"></div>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Student</th>
+                                    <th>Level</th>
+                                    <th>Passage</th>
+                                    <th>Fluency</th>
+                                    <th>Comprehension</th>
+                                </tr>
+                            </thead>
+                            <tbody id="teacherResultsBody">
+                                <tr>
+                                    <td colspan="6">No results yet.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <div class="auth-footer">
+                    <button id="logoutBtn" class="btn-start btn-secondary" type="button">Logout</button>
+                    <button class="btn-start" type="button" onclick="window.location.href='index.html'">Back to Student Page</button>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        // Optional: override API base if you want a different deployment endpoint.
+        // window.TEACHER_API_BASE = "https://your-site.netlify.app";
+    </script>
+    <script src="teacher-auth.js"></script>
+</body>
+</html>
