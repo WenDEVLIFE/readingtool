@@ -1815,6 +1815,10 @@ function getDetailedMatchingRules() {
                 lookaheadMatchIndex = -1;
             }
 
+            if (!ctx.isMobileRecognitionMode && lookaheadMatchIndex > ctx.currentWordIndex + 2) {
+                lookaheadMatchIndex = -1;
+            }
+
             if (lookaheadMatchIndex > ctx.currentWordIndex + 1) {
                 ctx.onLookaheadRange(lookaheadMatchIndex);
                 return true;
@@ -1830,8 +1834,8 @@ function getDetailedMatchingRules() {
             }
 
             if (!ctx.isMobileRecognitionMode && ctx.nextSentence) {
-                const nextSentenceSpan = Math.max(
-                    ctx.fastReadingLookahead,
+                const nextSentenceSpan = Math.min(
+                    2,
                     ctx.nextSentence.end - ctx.nextSentence.start + 1
                 );
 
@@ -1979,7 +1983,7 @@ const STRICT_RECOGNITION_MODE = true;
 const STRICT_NOISE_FALLBACK_MODE = false;
 const NOISE_RMS_THRESHOLD = 0.12;
 const NOISE_ADVANCE_COOLDOWN_MS = 350;
-const FAST_READING_LOOKAHEAD = 4;
+
 const SPEECH_ASSIST_COOLDOWN_MS = 1200;
 const SPEECH_ASSIST_MIN_CONFIDENCE = 0.5;
 const INTERIM_PROCESS_MIN_CONFIDENCE = 0.45;
@@ -1987,6 +1991,7 @@ const FINAL_PROCESS_MIN_CONFIDENCE = 0.3;
 const DESKTOP_INTERIM_MIN_CONFIDENCE = 0.58;
 const DESKTOP_FINAL_MIN_CONFIDENCE = 0.45;
 const INTERIM_MIN_TOKEN_LENGTH = 2;
+const FAST_READING_LOOKAHEAD = 1;
 const MOBILE_FAST_READING_LOOKAHEAD = 1;
 const MOBILE_MAX_OMISSION_JUMP = 1;
 const USE_BACKEND_STT_MODE = true;

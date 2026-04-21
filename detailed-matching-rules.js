@@ -41,6 +41,10 @@
             lookaheadMatchIndex = -1;
         }
 
+        if (!ctx.isMobileRecognitionMode && lookaheadMatchIndex > ctx.currentWordIndex + 2) {
+            lookaheadMatchIndex = -1;
+        }
+
         if (lookaheadMatchIndex > ctx.currentWordIndex + 1) {
             ctx.onLookaheadRange(lookaheadMatchIndex);
             return true;
@@ -56,8 +60,8 @@
         }
 
         if (!ctx.isMobileRecognitionMode && ctx.nextSentence) {
-            const nextSentenceSpan = Math.max(
-                ctx.fastReadingLookahead,
+            const nextSentenceSpan = Math.min(
+                2,
                 ctx.nextSentence.end - ctx.nextSentence.start + 1
             );
 
