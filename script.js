@@ -1828,7 +1828,15 @@ function getDetailedMatchingRules() {
                 if (ctx.isMobileRecognitionMode) {
                     ctx.onLookaheadSingleMobile();
                 } else {
-                    ctx.onLookaheadSingleDesktop();
+                    const shouldPreferClassification =
+                        ctx.isFinalResult !== true ||
+                        ctx.recognitionConfidence < ctx.lowConfidenceThreshold;
+
+                    if (shouldPreferClassification) {
+                        ctx.onDetermineError();
+                    } else {
+                        ctx.onLookaheadSingleDesktop();
+                    }
                 }
                 return true;
             }
@@ -1855,7 +1863,16 @@ function getDetailedMatchingRules() {
             if (!ctx.allowErrors) return true;
 
             if (ctx.isAcceptableWordMatch(ctx.normalizedSpokenWord, ctx.nextTargetWord)) {
-                ctx.onOmission();
+                const shouldPreferClassification =
+                    !ctx.isMobileRecognitionMode &&
+                    (ctx.isFinalResult !== true ||
+                        ctx.recognitionConfidence < ctx.lowConfidenceThreshold);
+
+                if (shouldPreferClassification) {
+                    ctx.onDetermineError();
+                } else {
+                    ctx.onOmission();
+                }
                 return true;
             }
 
