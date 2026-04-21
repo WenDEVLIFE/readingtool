@@ -1907,6 +1907,8 @@ const SPEECH_ASSIST_COOLDOWN_MS = 1200;
 const SPEECH_ASSIST_MIN_CONFIDENCE = 0.5;
 const INTERIM_PROCESS_MIN_CONFIDENCE = 0.45;
 const FINAL_PROCESS_MIN_CONFIDENCE = 0.3;
+const DESKTOP_INTERIM_MIN_CONFIDENCE = 0.58;
+const DESKTOP_FINAL_MIN_CONFIDENCE = 0.45;
 const INTERIM_MIN_TOKEN_LENGTH = 2;
 const MOBILE_FAST_READING_LOOKAHEAD = 1;
 const MOBILE_MAX_OMISSION_JUMP = 1;
@@ -2930,8 +2932,14 @@ function handleRecognitionResultEvent(event) {
     const livePolicy = getLivePolicy();
     const platformReadAloudFlow = getPlatformReadAloudFlow(runtime, livePolicy);
     const matchingProfile = getMatchingProfile();
-    const interimMinConfidence = Number(matchingProfile.interimProcessMinConfidence || INTERIM_PROCESS_MIN_CONFIDENCE);
-    const finalMinConfidence = Number(matchingProfile.finalProcessMinConfidence || FINAL_PROCESS_MIN_CONFIDENCE);
+    const baseInterimMinConfidence = Number(matchingProfile.interimProcessMinConfidence || INTERIM_PROCESS_MIN_CONFIDENCE);
+    const baseFinalMinConfidence = Number(matchingProfile.finalProcessMinConfidence || FINAL_PROCESS_MIN_CONFIDENCE);
+    const interimMinConfidence = isMobileMode
+        ? baseInterimMinConfidence
+        : Math.max(baseInterimMinConfidence, DESKTOP_INTERIM_MIN_CONFIDENCE);
+    const finalMinConfidence = isMobileMode
+        ? baseFinalMinConfidence
+        : Math.max(baseFinalMinConfidence, DESKTOP_FINAL_MIN_CONFIDENCE);
     const mobileTailCount = Number(platformReadAloudFlow.getTailCount(livePolicy) || 3);
     const now = Date.now();
 
@@ -2941,6 +2949,14 @@ function handleRecognitionResultEvent(event) {
         const rawConfidence = result?.[0]?.confidence;
         const confidence = (typeof rawConfidence === "number" && rawConfidence > 0) ? rawConfidence : null;
         const isFinal = result.isFinal === true;
+
+        if (!isFinal && !isMobileMode && transcript) {
+            const advancedFromInterim = handleInterimVoiceInput(transcript);
+            if (advancedFromInterim) {
+                updateRealtimeMetrics();
+                continue;
+            }
+        }
 
         if (!isFinal && confidence !== null && confidence < interimMinConfidence) {
             continue;
@@ -3027,11 +3043,13 @@ function handleRecognitionResultEvent(event) {
             continue;
         }
 
-        enqueueSpeechWords(deltaWords.join(" "), {
-            allowErrors: isFinal,
+        handleVoiceInput(deltaWords.join(" "), {
+            allowErrors: true,
             confidence,
-            isFinal
+            isFinal: true,
+            liveProgressOnly: false
         });
+        updateRealtimeMetrics();
     }
 }
 
