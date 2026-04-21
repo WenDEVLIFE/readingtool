@@ -3028,14 +3028,6 @@ function handleRecognitionResultEvent(event) {
             }
         }
 
-        if (!isFinal && !isMobileMode && transcript) {
-            const advancedFromInterim = handleInterimVoiceInput(transcript);
-            if (advancedFromInterim) {
-                updateRealtimeMetrics();
-                continue;
-            }
-        }
-
         if (!isFinal && confidence !== null && confidence < interimMinConfidence) {
             continue;
         }
@@ -3118,11 +3110,10 @@ function handleRecognitionResultEvent(event) {
             continue;
         }
 
-        handleVoiceInput(deltaWords.join(" "), {
+        enqueueSpeechWords(deltaWords.join(" "), {
             allowErrors: true,
             confidence,
-            isFinal: true,
-            liveProgressOnly: false
+            isFinal: true
         });
         updateRealtimeMetrics();
     }
