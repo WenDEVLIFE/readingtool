@@ -26,7 +26,7 @@
             shouldProcess: true,
             snapshot: tailSnapshot,
             options: {
-                allowErrors: false,
+                allowErrors: true,
                 confidence: Number.isFinite(ctx.confidence) ? ctx.confidence : NaN,
                 isFinal: ctx.isFinal === true,
                 liveProgressOnly: true
@@ -42,7 +42,7 @@
     function getFinalDeltaOptions(context) {
         const ctx = context || {};
         return {
-            allowErrors: false,
+            allowErrors: true,
             confidence: Number.isFinite(ctx.confidence) ? ctx.confidence : NaN,
             isFinal: ctx.isFinal === true,
             liveProgressOnly: true

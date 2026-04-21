@@ -960,6 +960,7 @@ function startRecognitionWatchdog() {
 
 function handleInterimVoiceInput(spokenText) {
     if (currentWordIndex >= wordElements.length) return false;
+    const runtime = getPlatformRuntime();
 
     const spokenWords = spokenText
         .toLowerCase()
@@ -984,8 +985,37 @@ function handleInterimVoiceInput(spokenText) {
             continue;
         }
 
+        const nextToken = normalizeWord(spokenWords[i + 1]);
+        const nextTargetWord = getTargetWordAt(currentWordIndex + 1);
+
         if (isAcceptableWordMatch(token, targetWord)) {
             markWordAsRead(currentWordIndex);
+            currentWordIndex++;
+            advanced = true;
+            resetHesitation();
+            continue;
+        }
+
+        if (runtime.mobile && nextTargetWord && isAcceptableWordMatch(token, nextTargetWord)) {
+            // Spoken token aligned with the next expected word; treat current as omitted and keep live cursor moving.
+            markWordAsError(currentWordIndex, "omit-error");
+            currentWordIndex++;
+            markWordAsRead(currentWordIndex);
+            currentWordIndex++;
+            advanced = true;
+            resetHesitation();
+            continue;
+        }
+
+        if (
+            runtime.mobile &&
+            token.length >= 4 &&
+            nextTargetWord &&
+            nextToken &&
+            isAcceptableWordMatch(nextToken, nextTargetWord)
+        ) {
+            // A clear substitution followed by alignment evidence should advance as substitution in live mode.
+            markWordAsError(currentWordIndex, "sub-error");
             currentWordIndex++;
             advanced = true;
             resetHesitation();
@@ -2568,8 +2598,7 @@ function processBackendSttResult(transcript, options = {}) {
         }
 
         handleVoiceInput(deltaWords.join(" "), {
-            allowErrors: false
-            ,
+            allowErrors: true,
             confidence: 1,
             isFinal: false,
             liveProgressOnly: true
@@ -3031,8 +3060,7 @@ function handleRecognitionResultEvent(event) {
 
                 if (fallbackAction.shouldProcess) {
                     handleVoiceInput(fallbackAction.snapshot, {
-                        ...fallbackAction.options,
-                        allowErrors: false
+                        ...fallbackAction.options
                     });
                     lastMobileLiveFallbackTranscript = fallbackAction.snapshot;
                     lastMobileLiveFallbackAt = now;
@@ -3056,8 +3084,7 @@ function handleRecognitionResultEvent(event) {
 
                 if (fallbackAction.shouldProcess) {
                     handleVoiceInput(fallbackAction.snapshot, {
-                        ...fallbackAction.options,
-                        allowErrors: false
+                        ...fallbackAction.options
                     });
                     lastMobileLiveFallbackTranscript = fallbackAction.snapshot;
                     lastMobileLiveFallbackAt = now;
@@ -3072,7 +3099,7 @@ function handleRecognitionResultEvent(event) {
 
         if (!isFinal) {
             handleVoiceInput(deltaWords.join(" "), {
-                allowErrors: false,
+                allowErrors: isMobileMode,
                 confidence: confidence ?? NaN,
                 isFinal: false,
                 liveProgressOnly: isMobileMode
@@ -3086,8 +3113,7 @@ function handleRecognitionResultEvent(event) {
                 confidence: confidence ?? NaN
             });
             handleVoiceInput(deltaWords.join(" "), {
-                ...finalDeltaOptions,
-                allowErrors: false
+                ...finalDeltaOptions
             });
             continue;
         }
