@@ -715,6 +715,23 @@ function getPendingInterimTranscriptSnapshot() {
     return orderedSegments.join(" ").trim();
 }
 
+function resetLiveTranscriptCursors() {
+    liveTranscriptCursor = "";
+    lastSpeechAssistTranscript = "";
+    lastMobileLiveFallbackTranscript = "";
+    lastMobileLiveFallbackAt = 0;
+    deepgramLiveTranscriptCursor = "";
+}
+
+function resetLiveTranscriptTracking() {
+    resetLiveTranscriptCursors();
+    liveResultSegments.clear();
+    pendingSpeechQueue = [];
+    speechQueueHandle = null;
+    deepgramLastDeltaLength = 0;
+    deepgramLastTranscriptAt = 0;
+}
+
 function waitForRecognitionDrain(timeoutMs = 180) {
     return new Promise((resolve) => {
         setTimeout(resolve, Math.max(0, timeoutMs));
@@ -3016,6 +3033,7 @@ function handleRecognitionResultEvent(event) {
         : Math.max(baseFinalMinConfidence, DESKTOP_FINAL_MIN_CONFIDENCE);
     const mobileTailCount = Number(platformReadAloudFlow.getTailCount(livePolicy) || 3);
     const now = Date.now();
+    let sawFinalTranscript = false;
 
     for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
@@ -3023,6 +3041,10 @@ function handleRecognitionResultEvent(event) {
         const rawConfidence = result?.[0]?.confidence;
         const confidence = (typeof rawConfidence === "number" && rawConfidence > 0) ? rawConfidence : null;
         const isFinal = result.isFinal === true;
+
+        if (isFinal) {
+            sawFinalTranscript = true;
+        }
 
         if (isMobileMode && !isFinal && transcript) {
             const advancedFromInterim = handleInterimVoiceInput(transcript);
@@ -3119,6 +3141,10 @@ function handleRecognitionResultEvent(event) {
             isFinal: true
         });
         updateRealtimeMetrics();
+    }
+
+    if (sawFinalTranscript) {
+        resetLiveTranscriptCursors();
     }
 }
 
@@ -3273,6 +3299,7 @@ async function runFluencyTestStartSequence() {
 
     recognition.onend = () => {
         if (lifecycleAdapter.shouldRestartOnEnd({ isRecording, shouldAutoRestartRecognition })) {
+            resetLiveTranscriptCursors();
             scheduleRecognitionRestart();
             return;
         }
@@ -4636,6 +4663,10 @@ function initDeepgramLiveStream() {
                 });
                 updateRealtimeMetrics();
                 refreshMobileLiveDebugLine();
+
+                if (data.is_final === true) {
+                    resetLiveTranscriptCursors();
+                }
             }
         };
 
