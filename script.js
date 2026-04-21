@@ -2927,7 +2927,7 @@ function renderQuiz(questions) {
         `;
     });
     document.getElementById("xwquizArea").innerHTML = quizHTML;
-}nakaga
+}
 
 function startBackendOnlyRecordingSession() {
     isRecording = true;
