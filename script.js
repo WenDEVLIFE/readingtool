@@ -1031,8 +1031,8 @@ function handleInterimVoiceInput(spokenText) {
             nextToken &&
             isAcceptableWordMatch(nextToken, nextTargetWord)
         ) {
-            // A clear substitution followed by alignment evidence should advance as substitution in live mode.
-            markWordAsError(currentWordIndex, "sub-error");
+            // This is a low-certainty assist path; classify instead of forcing substitution.
+            determineErrorType(token, targetWord, 1);
             currentWordIndex++;
             advanced = true;
             resetHesitation();
@@ -2112,7 +2112,7 @@ function flushHighlightUpdate() {
     lastHighlightedIndex = nextIndex;
 }
 
-function advanceWordFromSpeechAssist(className = "sub-error") {
+function advanceWordFromSpeechAssist(className = "mis-error") {
     if (!isRecording || currentWordIndex >= wordElements.length) return;
 
     markWordAsError(currentWordIndex, className);
@@ -2161,7 +2161,7 @@ function maybeAssistProgressFromSpeech(result, transcript) {
         return;
     }
 
-    advanceWordFromSpeechAssist("sub-error");
+    advanceWordFromSpeechAssist("mis-error");
     lastSpeechAssistAdvanceAt = now;
     lastSpeechAssistTranscript = normalizedTranscript;
 }
