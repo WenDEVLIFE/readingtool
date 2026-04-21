@@ -1326,8 +1326,11 @@ function getTranscriptMatchingEngine() {
             }
 
             return Math.max(
-                Number(context.fastReadingLookahead || 4),
-                Number(context.currentSentenceEnd || 0) - Number(context.currentWordIndex || 0)
+                0,
+                Math.min(
+                    Number(context.fastReadingLookahead || 4),
+                    Number(context.currentSentenceEnd || 0) - Number(context.currentWordIndex || 0)
+                )
             );
         }
     };

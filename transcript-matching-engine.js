@@ -33,7 +33,7 @@
             return mobileLookahead;
         }
 
-        return Math.max(fastReadingLookahead, currentSentenceEnd - currentWordIndex);
+        return Math.max(0, Math.min(fastReadingLookahead, currentSentenceEnd - currentWordIndex));
     }
 
     global.TranscriptMatchingEngine = {
