@@ -2192,6 +2192,20 @@ function markWordAsRead(index) {
     const el = wordElements[index];
     if (!el) return;
 
+    const hasErrorClass =
+        el.classList.contains("sub-error") ||
+        el.classList.contains("omit-error") ||
+        el.classList.contains("add-error") ||
+        el.classList.contains("mis-error");
+
+    if (hasErrorClass) {
+        if (shouldCount && el.dataset.readCounted !== "1") {
+            totalWordsRead++;
+            el.dataset.readCounted = "1";
+        }
+        return;
+    }
+
     if (hasWordStateClass(el, "read-success")) {
         if (shouldCount && el.dataset.readCounted !== "1") {
             totalWordsRead++;
