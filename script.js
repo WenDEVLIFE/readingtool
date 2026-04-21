@@ -1500,12 +1500,37 @@ function getSpeechErrorClassifier() {
             const similarity = 1 - distance / baseLength;
             const misThreshold = Number.isFinite(ctx.mispronunciationSimilarityThreshold)
                 ? ctx.mispronunciationSimilarityThreshold
-                : 0.4;
+                : 0.34;
             const lowConfidenceThreshold = Number.isFinite(ctx.lowConfidenceMispronunciationThreshold)
                 ? ctx.lowConfidenceMispronunciationThreshold
                 : 0.82;
+            const bridgeThreshold = Number.isFinite(ctx.mispronunciationBridgeSimilarityThreshold)
+                ? ctx.mispronunciationBridgeSimilarityThreshold
+                : 0.72;
 
-            if (similarity >= misThreshold || confidence < lowConfidenceThreshold) {
+            let bridgeSimilarity = 0;
+            if (typeof ctx.normalizePhoneticBridge === "function") {
+                const spokenBridge = String(ctx.normalizePhoneticBridge(spoken) || "");
+                const targetBridge = String(ctx.normalizePhoneticBridge(target) || "");
+
+                if (spokenBridge && targetBridge) {
+                    if (spokenBridge === targetBridge) {
+                        bridgeSimilarity = 1;
+                    } else {
+                        const bridgeBaseLength = Math.max(spokenBridge.length, targetBridge.length, 1);
+                        const bridgeDistance = typeof ctx.levenshteinDistance === "function"
+                            ? ctx.levenshteinDistance(spokenBridge, targetBridge)
+                            : bridgeBaseLength;
+                        bridgeSimilarity = 1 - bridgeDistance / bridgeBaseLength;
+                    }
+                }
+            }
+
+            if (
+                similarity >= misThreshold ||
+                bridgeSimilarity >= bridgeThreshold ||
+                confidence < lowConfidenceThreshold
+            ) {
                 return "mis-error";
             }
 
@@ -3756,7 +3781,9 @@ function determineErrorType(spoken, target, confidence = 1) {
         confidence,
         isAcceptableWordMatch,
         levenshteinDistance,
+        normalizePhoneticBridge,
         mispronunciationSimilarityThreshold: MISPRONUNCIATION_SIMILARITY_THRESHOLD,
+        mispronunciationBridgeSimilarityThreshold: 0.72,
         lowConfidenceMispronunciationThreshold: LOW_CONFIDENCE_MISPRONUNCIATION_THRESHOLD
     });
 
