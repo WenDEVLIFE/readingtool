@@ -3550,7 +3550,11 @@ function handleVoiceInput(spokenText, options = { allowErrors: true, confidence:
                 onMis: withDecision("live.onMis", () => stateMutations.errorAndAdvance("mis-error", { resetMobileStall: true })),
                 onAdd: withDecision("live.onAdd", () => stateMutations.errorOnly("add-error")),
                 onOmit: withDecision("live.onOmit", () => stateMutations.errorAndAdvance("omit-error", { resetMobileStall: true })),
-                onSub: withDecision("live.onSub", () => stateMutations.errorAndAdvance("sub-error", { resetMobileStall: true })),
+                onSub: withDecision("live.onSub", () => callbackActions.determineAndRefresh(
+                    normalizedSpokenWord,
+                    targetWord,
+                    recognitionConfidence
+                )),
                 onIosLookahead: withDecision("live.onIosLookahead", (index) => stateMutations.setIndexAndReadAdvance(index, { resetMobileStall: true })),
                 onAdvanceRefresh: withDecision("live.onAdvanceRefresh", () => callbackActions.advanceAndRefresh({ resetMobileStall: true })),
                 onRefresh: withDecision("live.onRefresh", () => stateMutations.refresh())
