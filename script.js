@@ -2237,6 +2237,18 @@ function markWordAsError(index, className) {
         return;
     }
 
+    const existingErrorClass =
+        el.classList.contains("sub-error") ? "sub-error" :
+        el.classList.contains("mis-error") ? "mis-error" :
+        el.classList.contains("omit-error") ? "omit-error" :
+        el.classList.contains("add-error") ? "add-error" :
+        "";
+
+    if ((existingErrorClass === "sub-error" || existingErrorClass === "mis-error") &&
+        (className === "omit-error" || className === "add-error")) {
+        return;
+    }
+
     scheduleDomUpdate(() => {
         el.classList.remove("current-word");
         clearWordStateClasses(el);
