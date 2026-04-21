@@ -3806,8 +3806,7 @@ async function stopFluencyTest() {
     }
 
     const domReadCount = document.querySelectorAll(".passage-container .read-success").length;
-    const indexBasedProgress = Math.max(0, Math.min(currentWordIndex, wordElements.length));
-    totalWordsRead = Math.max(totalWordsRead, domReadCount, indexBasedProgress);
+    totalWordsRead = Math.max(totalWordsRead, domReadCount);
     updateRealtimeMetrics();
 
     document.getElementById("startReadingBtn").innerText = "🎤 START READING ALOUD";

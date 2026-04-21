@@ -28,25 +28,6 @@
             return { type: "none" };
         }
 
-        const preventMobileAutoStop =
-            ctx.useBackendSttMode === true &&
-            ctx.isMobileRecognitionMode === true &&
-            ctx.forceDetailedMatching !== true;
-
-        if (preventMobileAutoStop) {
-            return {
-                type: "clamp-end",
-                index: Math.max(0, wordCount - 1)
-            };
-        }
-
-        if (ctx.isIOSLiveMode === true && ctx.forceDetailedMatching !== true) {
-            return {
-                type: "clamp-end",
-                index: Math.max(0, wordCount - 1)
-            };
-        }
-
         return { type: "stop" };
     }
 
