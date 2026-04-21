@@ -4313,10 +4313,10 @@ function restoreExamSessionOnIndex() {
     levelSelectEl.value = session.level;
     currentLevel = session.level;
     currentPassageIndex = index;
-    currentPassageTotal = levelData.length;
+    currentPassageTotal = getPassageCycleIndices(levelData).length;
     currentPassageOrder = Math.min(
         Math.max(Number(session.passageOrder) || index + 1, 1),
-        Math.max(levelData.length, 1)
+        Math.max(currentPassageTotal, 1)
     );
     currentPassageData = levelData[index];
     currentAttemptId = Number(session.attemptId || 0) || null;
@@ -4351,31 +4351,59 @@ function setUsedPassagesByLevel(value) {
     localStorage.setItem("usedPassagesByLevel", JSON.stringify(value || {}));
 }
 
+function getPassageCycleIndices(levelData) {
+    const cycleCount = Math.min(10, Array.isArray(levelData) ? levelData.length : 0);
+    return Array.from({ length: cycleCount }, (_, idx) => idx);
+}
+
+function pickRandomPassageIndex(indices) {
+    if (!Array.isArray(indices) || !indices.length) {
+        return -1;
+    }
+
+    const randomIndex = Math.floor(Math.random() * indices.length);
+    return indices[randomIndex];
+}
+
 function selectSequentialPassageIndex(level, levelData, isNextRequest) {
     const usedByLevel = getUsedPassagesByLevel();
-    const usedForLevel = Array.isArray(usedByLevel[level]) ? [...usedByLevel[level]] : [];
+    const cycleIndices = getPassageCycleIndices(levelData);
+    const cycleSet = new Set(cycleIndices);
+    const usedForLevel = Array.isArray(usedByLevel[level])
+        ? usedByLevel[level].filter((index) => cycleSet.has(index))
+        : [];
+
+    if (!cycleIndices.length) {
+        return {
+            index: 0,
+            order: 1,
+            total: 0
+        };
+    }
 
     const isNewExamStart = !isNextRequest || currentLevel !== level || !examStarted;
 
     if (isNewExamStart) {
         usedForLevel.length = 0;
-        usedForLevel.push(0);
+        const firstIndex = pickRandomPassageIndex(cycleIndices);
+        usedForLevel.push(firstIndex);
         usedByLevel[level] = usedForLevel;
         setUsedPassagesByLevel(usedByLevel);
         return {
-            index: 0,
+            index: firstIndex,
             order: 1,
-            total: levelData.length
+            total: cycleIndices.length
         };
     }
 
-    const lastShownIndex = usedForLevel.length ? usedForLevel[usedForLevel.length - 1] : 0;
-    let nextIndex = (lastShownIndex + 1) % levelData.length;
-
-    if (usedForLevel.length >= levelData.length) {
+    if (usedForLevel.length >= cycleIndices.length) {
         usedForLevel.length = 0;
-        showAppAlert("You have reached the last passage for this level. Restarting from passage 1.", "Passage Cycle Complete");
+        showAppAlert("Passages 1-10 reshuffled. Starting a new random cycle.", "Passage Cycle Complete");
     }
+
+    const usedSet = new Set(usedForLevel);
+    const available = cycleIndices.filter((index) => !usedSet.has(index));
+    const nextIndex = pickRandomPassageIndex(available.length ? available : cycleIndices);
 
     usedForLevel.push(nextIndex);
     usedByLevel[level] = usedForLevel;
@@ -4384,7 +4412,7 @@ function selectSequentialPassageIndex(level, levelData, isNextRequest) {
     return {
         index: nextIndex,
         order: usedForLevel.length,
-        total: levelData.length
+        total: cycleIndices.length
     };
 }
 
@@ -4441,7 +4469,10 @@ async function loadPreviousPassage() {
     }
 
     const usedByLevel = getUsedPassagesByLevel();
-    const usedForLevel = Array.isArray(usedByLevel[selectedLevel]) ? [...usedByLevel[selectedLevel]] : [];
+    const cycleSet = new Set(getPassageCycleIndices(levelData));
+    const usedForLevel = Array.isArray(usedByLevel[selectedLevel])
+        ? usedByLevel[selectedLevel].filter((index) => cycleSet.has(index))
+        : [];
 
     if (usedForLevel.length <= 1) {
         showAppAlert("You are already on the first passage for this level.", "First Passage");
@@ -4454,7 +4485,7 @@ async function loadPreviousPassage() {
     setUsedPassagesByLevel(usedByLevel);
 
     currentLevel = selectedLevel;
-    currentPassageTotal = levelData.length;
+    currentPassageTotal = getPassageCycleIndices(levelData).length;
     currentPassageOrder = usedForLevel.length;
     currentPassageIndex = previousIndex;
     examStarted = true;
