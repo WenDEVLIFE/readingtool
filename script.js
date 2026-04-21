@@ -1084,7 +1084,7 @@ function getLivePolicy() {
         strictMobileLiveMode: runtime.mobile,
         iosConservativeLive: runtime.ios,
         iosSafeLookahead: runtime.ios ? 3 : 1,
-        iosFinalTailSize: runtime.ios ? 10 : 1,
+        iosFinalTailSize: runtime.ios ? 4 : 1,
         androidFinalTailSize: runtime.android ? 3 : 1
     };
 }
@@ -1942,9 +1942,10 @@ const MOBILE_MAX_OMISSION_JUMP = 1;
 const USE_BACKEND_STT_MODE = true;
 const MOBILE_STREAM_TIMESLICE_FAST_MS = 50;
 const MOBILE_STREAM_TIMESLICE_STABLE_MS = 80;
-const MOBILE_STREAM_STALL_THRESHOLD_MS = 2600;
-const MOBILE_LIVE_PREVIEW_INTERVAL_MS = 700;
-const MOBILE_LIVE_PREVIEW_MIN_BYTES = 2500;
+const MOBILE_STREAM_STALL_THRESHOLD_MS = 1400;
+const MOBILE_LIVE_PREVIEW_INTERVAL_MS = 500;
+const MOBILE_LIVE_PREVIEW_MIN_BYTES = 1800;
+const MOBILE_LIVE_PREVIEW_MAX_CHUNKS = 14;
 const MOBILE_LIVE_TRANSCRIPT_TAIL_WORDS = 4;
 const DEEPGRAM_API_KEY = "bf322035aa3f2ced5cc4dfb26579846b2ce1f91d";
 const BROWSER_RECOGNITION_LANG = "en-US";
@@ -2555,13 +2556,23 @@ function processBackendSttResult(transcript, options = {}) {
     const livePreview = options.livePreview === true;
 
     if (livePreview) {
-        if (cleanTranscript === mobileLiveBackendLastTranscript) {
-            return false;
-        }
+        const deltaWords = getTranscriptDeltaWords(
+            mobileLiveBackendLastTranscript,
+            cleanTranscript,
+            MOBILE_LIVE_TRANSCRIPT_TAIL_WORDS
+        );
         mobileLiveBackendLastTranscript = cleanTranscript;
 
-        applyTranscriptToPassage(cleanTranscript, {
+        if (!deltaWords.length) {
+            return false;
+        }
+
+        handleVoiceInput(deltaWords.join(" "), {
             allowErrors: false
+            ,
+            confidence: 1,
+            isFinal: false,
+            liveProgressOnly: true
         });
         totalWordsRead = document.querySelectorAll(".passage-container .read-success").length;
         updateRealtimeMetrics();
@@ -2632,7 +2643,12 @@ function startMobileBackendLivePreview() {
         }
 
         const sampleMime = recordedAudioMimeType || "audio/webm";
-        const snapshotBlob = new Blob(recordedAudioChunks, { type: sampleMime });
+        const recentChunks = recordedAudioChunks.slice(-MOBILE_LIVE_PREVIEW_MAX_CHUNKS);
+        if (!recentChunks.length) {
+            return;
+        }
+
+        const snapshotBlob = new Blob(recentChunks, { type: sampleMime });
         if (snapshotBlob.size < MOBILE_LIVE_PREVIEW_MIN_BYTES) {
             return;
         }
@@ -2881,8 +2897,8 @@ function renderQuiz(questions) {
             </div>
         `;
     });
-    document.getElementById("quizArea").innerHTML = quizHTML;
-}
+    document.getElementById("xwquizArea").innerHTML = quizHTML;
+}nakaga
 
 function startBackendOnlyRecordingSession() {
     isRecording = true;
@@ -2975,6 +2991,13 @@ function handleRecognitionResultEvent(event) {
         const rawConfidence = result?.[0]?.confidence;
         const confidence = (typeof rawConfidence === "number" && rawConfidence > 0) ? rawConfidence : null;
         const isFinal = result.isFinal === true;
+
+        if (isMobileMode && !isFinal && transcript) {
+            const advancedFromInterim = handleInterimVoiceInput(transcript);
+            if (advancedFromInterim) {
+                updateRealtimeMetrics();
+            }
+        }
 
         if (!isFinal && !isMobileMode && transcript) {
             const advancedFromInterim = handleInterimVoiceInput(transcript);
@@ -3560,6 +3583,46 @@ function getDeltaWordsFromResultSegment(segmentIndex, transcript, isFinal) {
         liveResultSegments.delete(segmentIndex);
     } else {
         liveResultSegments.set(segmentIndex, normalizedTranscript);
+    }
+
+    return currentWords.slice(commonPrefixLength);
+}
+
+function getTranscriptDeltaWords(previousTranscript, currentTranscript, rewriteTailWords = MOBILE_LIVE_TRANSCRIPT_TAIL_WORDS) {
+    const normalizeTranscript = (value) => String(value || "")
+        .toLowerCase()
+        .replace(/[^\w\s']/g, "")
+        .trim();
+
+    const prevNormalized = normalizeTranscript(previousTranscript);
+    const currNormalized = normalizeTranscript(currentTranscript);
+
+    if (!currNormalized) {
+        return [];
+    }
+
+    const previousWords = prevNormalized ? prevNormalized.split(/\s+/).filter(Boolean) : [];
+    const currentWords = currNormalized ? currNormalized.split(/\s+/).filter(Boolean) : [];
+
+    let commonPrefixLength = 0;
+    while (
+        commonPrefixLength < previousWords.length &&
+        commonPrefixLength < currentWords.length &&
+        previousWords[commonPrefixLength] === currentWords[commonPrefixLength]
+    ) {
+        commonPrefixLength++;
+    }
+
+    if (!previousWords.length) {
+        return currentWords;
+    }
+
+    if (commonPrefixLength === currentWords.length) {
+        return [];
+    }
+
+    if (commonPrefixLength === 0) {
+        return currentWords.slice(-Math.max(1, Number(rewriteTailWords) || 1));
     }
 
     return currentWords.slice(commonPrefixLength);

@@ -17,7 +17,7 @@
         }
 
         const isDuplicate = tailSnapshot === String(ctx.lastSnapshot || "");
-        const allowRepeat = isDuplicate && (Number(ctx.now || 0) - Number(ctx.lastSnapshotAt || 0) > 500);
+        const allowRepeat = isDuplicate && (Number(ctx.now || 0) - Number(ctx.lastSnapshotAt || 0) > 120);
         if (isDuplicate && !allowRepeat) {
             return { shouldProcess: false };
         }
@@ -36,7 +36,7 @@
 
     function getTailCount(livePolicy) {
         const policy = livePolicy || {};
-        return Number(policy.iosFinalTailSize || 10);
+        return Number(policy.iosFinalTailSize || 4);
     }
 
     function getFinalDeltaOptions(context) {

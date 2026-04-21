@@ -17,7 +17,7 @@
         }
 
         const isDuplicate = tailSnapshot === String(ctx.lastSnapshot || "");
-        const allowRepeat = isDuplicate && (Number(ctx.now || 0) - Number(ctx.lastSnapshotAt || 0) > 500);
+        const allowRepeat = isDuplicate && (Number(ctx.now || 0) - Number(ctx.lastSnapshotAt || 0) > 120);
         if (isDuplicate && !allowRepeat) {
             return { shouldProcess: false };
         }
