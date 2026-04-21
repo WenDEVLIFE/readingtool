@@ -1659,6 +1659,33 @@ function getLiveProgressRules() {
             }
 
             if (!ctx.allowErrors) {
+                const canSoftAdvance =
+                    ctx.allowSoftAdvanceWithoutErrors === true &&
+                    ctx.isClearMobileReadToken(normalizedSpokenWord, ctx.recognitionConfidence, ctx.isFinalResult);
+
+                if (canSoftAdvance) {
+                    if (ctx.isAcceptableWordMatch(normalizedSpokenWord, nextTargetWord)) {
+                        if (!ctx.iosConservativeLive) {
+                            ctx.onOmit();
+                        } else {
+                            ctx.onAdvanceRefresh();
+                        }
+                        return true;
+                    }
+
+                    const hasNextAlignmentEvidence =
+                        ctx.isFinalResult ||
+                        (nextSpokenWord && ctx.isAcceptableWordMatch(nextSpokenWord, nextTargetWord));
+
+                    if (hasNextAlignmentEvidence) {
+                        if (!ctx.iosConservativeLive) {
+                            ctx.onSub();
+                        } else {
+                            ctx.onAdvanceRefresh();
+                        }
+                    }
+                }
+
                 return true;
             }
 
@@ -3366,6 +3393,7 @@ function handleVoiceInput(spokenText, options = { allowErrors: true, confidence:
                 nextTargetWord,
                 isFinalResult,
                 allowErrors,
+                allowSoftAdvanceWithoutErrors: liveProgressOnly && !allowErrors,
                 iosConservativeLive,
                 recognitionConfidence,
                 lowConfidenceThreshold,
