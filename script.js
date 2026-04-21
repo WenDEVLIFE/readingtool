@@ -1916,8 +1916,8 @@ const USE_BACKEND_STT_MODE = true;
 const MOBILE_STREAM_TIMESLICE_FAST_MS = 50;
 const MOBILE_STREAM_TIMESLICE_STABLE_MS = 80;
 const MOBILE_STREAM_STALL_THRESHOLD_MS = 2600;
-const MOBILE_LIVE_PREVIEW_INTERVAL_MS = 900;
-const MOBILE_LIVE_PREVIEW_MIN_BYTES = 6000;
+const MOBILE_LIVE_PREVIEW_INTERVAL_MS = 700;
+const MOBILE_LIVE_PREVIEW_MIN_BYTES = 2500;
 const MOBILE_LIVE_TRANSCRIPT_TAIL_WORDS = 4;
 const DEEPGRAM_API_KEY = "bf322035aa3f2ced5cc4dfb26579846b2ce1f91d";
 const BROWSER_RECOGNITION_LANG = "en-US";
@@ -2571,10 +2571,6 @@ function startMobileBackendLivePreview() {
         return;
     }
 
-    if (deepgramSocket && (deepgramSocket.readyState === 0 || deepgramSocket.readyState === 1)) {
-        return;
-    }
-
     mobileLiveBackendLastTranscript = "";
     mobileLiveBackendInFlight = false;
 
@@ -2592,6 +2588,9 @@ function startMobileBackendLivePreview() {
             if (hasRecentStreamTranscript) {
                 return;
             }
+
+            deepgramLastStreamError = `stream stale ${now - deepgramLastTranscriptAt}ms; using fallback`;
+            refreshMobileLiveDebugLine();
 
             if (!mobileRecorderAdaptedToStable && deepgramAudioChunksSent > 30) {
                 mobileRecorderTimesliceMs = MOBILE_STREAM_TIMESLICE_STABLE_MS;
