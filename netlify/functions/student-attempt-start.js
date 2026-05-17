@@ -15,7 +15,7 @@ function normalizeNameKey(value) {
 
 function normalizeLevel(value) {
   const upper = String(value || "").trim().toUpperCase();
-  if (!["EASY", "MEDIUM", "HARD"].includes(upper)) {
+  if (!["EASY", "MODERATE", "DIFFICULT", "VERY_DIFFICULT"].includes(upper)) {
     return "";
   }
   return upper;

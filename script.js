@@ -27,6 +27,140 @@ document.addEventListener('DOMContentLoaded', function () {
 const assessmentData = {
     EASY: [
         {
+            title: "The Solar System",
+            text: "The solar system is what’s up there out and about in space, all around the planet we live on! That’s right! Our sun, the star that warms and lights up the Earth! And not forgetting all the planets that move around it, our moon, and so forth. There are eight planets (yeah, we are in the third group of them from the sun!). Some of the planets are made of rock, and others are made of gases. How do astronauts find out about all there is to know out there? They use telescopes and satellites, of course. Some intelligent scientists even blast rockets to the planets and moons! Of course, the moon orbits around the Earth and even helps the ocean with its tides. Finding out about the solar system teaches us about the universe and how the planets orbit day after day!",
+            questions: [
+                { q: "Why do scientists use telescopes and satellites?", options: ["To study outer space", "To clean the moon daily", "To change the planets' paths", "To control the ocean tides"], correct: 0 },
+                { q: "What can be inferred about the moon from the passage?", options: ["It produces heat for Earth", "It moves farther every year", "It affects the movement of tides", "It shines brighter than the sun"], correct: 2 },
+                { q: "Which statement best explains the solar system?", options: ["It contains stars only", "It is made of moving clouds", "It includes the sun and planets", "It covers only Earth and the moon"], correct: 2 },
+                { q: "Why is learning about the solar system important?", options: ["It teaches people about planets", "It explains how rockets are built", "It helps astronauts live on Earth", "It shows how oceans form waves"], correct: 0 },
+                { q: "Which detail supports the idea that scientists explore space actively?", options: ["The moon moves around Earth", "Some planets are made of gas", "Astronauts use books about stars", "Scientists send rockets to planets"], correct: 3 }
+            ]
+        },
+        {
+            title: "The Human Body",
+            text: "The human body is made of a lot of neat systems that work every day! The skeletal system gives support to our bodies, and protects important organs in us in case we should fall or fall against something. Then, we have muscles that help us to move more things and, in most cases, allow us to carry things too! Who knew that our blood throughout our body is moved around just by a special system, the circulatory system? Our heart pumps blood all about the body to all the nooks and crannies with oxygen. Using the lungs of the respiratory system, we help ourselves take in the air we need. The food we eat is aided by the digestive system, which allows us to break it down for nourishment and energy. To keep us from getting sick, doctors and nurses study our bodies and all their workings. And it is only some of the repairs and stuff the human body is supposed to do to stay healthy and moving that I have just scratched the surface of! Another would be drinking plenty of water, and of course, taking a nice leisurely walk daily!",
+            questions: [
+                { q: "What is the main function of the skeletal system?", options: ["To carry oxygen in blood", "To support and protect organs", "To break food into nutrients", "To move air through the lungs"], correct: 1 },
+                { q: "Why is the circulatory system important?", options: ["It protects bones from damage", "It pumps blood through the body", "It allows food to enter muscles", "It controls movement during exercise"], correct: 1 },
+                { q: "What may happen if students lack proper sleep?", options: ["They may lose concentration", "They may stop breathing easily", "They may forget how to walk", "They may weaken their bones"], correct: 0 },
+                { q: "Which body system helps people breathe air?", options: ["Digestive system", "Skeletal system", "Respiratory system", "Circulatory system"], correct: 2 },
+                { q: "Which idea is emphasized in the passage?", options: ["Healthy habits help the body", "Exercise is harder than studying", "Muscles are stronger than bones", "Doctors repair every body problem"], correct: 0 }
+            ]
+        },
+        {
+            title: "Plants and Photosynthesis",
+            text: "Here’s a bit about the plants! Yes, they are living organisms, and need direct sunlight, water, air, and nutrients to survive! Most of them are neat and even make their own food in a nifty process called photosynthesis. In fact, they use the sunlight, and carbon dioxide and water that they take in, to do a process and produce glucose and oxygen! Chlorophyll, the green substance in leaves, enables plants to absorb sunlight. Roots draw earth and moisture from the soil for use in the plant. Stems convey the water and nutrients to different parts of the plant. Flowers are organs that help a plant to bear seed. Plants are of great importance to animal life. All the air we breathe is made by them, as well as nearly all the food of most of our race; on the other hand, without them, we animals could not live or possibly even exist.",
+            questions: [
+                { q: "What helps plants absorb sunlight?", options: ["Roots inside the soil", "Flowers holding the seeds", "Chlorophyll in the leaves", "Water stored in the stems"], correct: 2 },
+                { q: "Why are plants important to animals?", options: ["They create clean oxygen", "They produce heavy rainfall", "They protect mountains daily", "They move nutrients underground"], correct: 0 },
+                { q: "What is produced during photosynthesis?", options: ["Oxygen and glucose", "Water and minerals", "Chlorophyll and roots", "Carbon dioxide and soil"], correct: 0 },
+                { q: "Which plant part carries water and nutrients?", options: ["Leaves near the flowers", "Stems throughout the plant", "Roots beneath the ground", "Seeds inside the flower"], correct: 1 },
+                { q: "What would most likely happen without plants?", options: ["Animals would grow faster", "Rivers would stop flowing", "Humans would stop building", "Living things could not survive"], correct: 3 }
+            ]
+        },
+        {
+            title: "The Importance of Geometry",
+            text: "Geometry is a part of mathematics that has to do with certain figures, lines, angles, and space. We learned in geometry class that there are triangles, circles, and rectangles, and other classes of figures. A triangle, we learned, is a figure with three sides and three angles. A rectangle is a figure with four sides, but with opposite sides equal. Geometry is used by builders, engineers, and artists. Architects use it in building designs and engineers use it in bridges and other work. We learned to find the perimeter and the area. The volume was found by using a formula. A ruler and a protractor help us to measure lines and angles. Doing all this kind of work helped us to learn to think clearly and to think logically. Geometry assists individuals in comprehending patterns, dimensions, and how objects are positioned relative to one another.",
+            questions: [
+                { q: "What does geometry mainly study?", options: ["Plants and living things", "Numbers used in division", "Shapes, lines, and angles", "Stories from world history"], correct: 2 },
+                { q: "Why do architects use geometry?", options: ["To improve reading skills", "To create building designs", "To measure animal weight", "To study weather patterns"], correct: 1 },
+                { q: "Which tool measures angles correctly?", options: ["Compass used in science", "Yardstick used outdoors", "Calculator used in class", "Protractor used in geometry"], correct: 3 },
+                { q: "What skill can geometry improve?", options: ["Logical thinking abilities", "Musical performance skills", "Creative storytelling talent", "Physical strength and balance"], correct: 0 },
+                { q: "Which statement about rectangles is correct?", options: ["They contain three equal sides", "They have opposite sides equal", "They form circles and curves", "They include five sharp angles"], correct: 1 }
+            ]
+        },
+        {
+            title: "Learning Percentages",
+            text: "Percentages are applicable for comparing any two numbers in terms of 100. The symbol for percent is the percent sign (or %). Students apply percentages in their lessons in mathematics relative to problems about discounts and prices; it is also used in relation to grades and data; that is, 90 percent shows that there are 90 right answers out of the one hundred. Stores often employ percent-off during the same periods so they can reduce prices for items that otherwise would sell at a loss. Percent can be expressed sometimes as a fraction or a decimal; to express a percent numerically, students use their multiplication and division tables for each permutation of numbers. Also, graphs and tables are used to express information in terms of percent; we use percent to deal with statistics about money, voting, and costs, and so on; it helps us with school problems.",
+            questions: [
+                { q: "What does ninety percent mean?", options: ["Ninety out of one hundred", "Ninety added to one hundred", "Ninety divided by ten groups", "Ninety smaller than fifty percent"], correct: 0 },
+                { q: "Why do stores use percent-off sales?", options: ["To increase school grades", "To compare voting results", "To lower prices on items", "To solve difficult equations"], correct: 2 },
+                { q: "Which form can also represent percent?", options: ["A paragraph and table", "A graph and picture", "A fraction or decimal", "A ruler and symbol"], correct: 2 },
+                { q: "How are percentages useful in school?", options: ["They explain weather conditions", "They measure classroom furniture", "They describe plant growth daily", "They help students solve problems"], correct: 3 },
+                { q: "Which situation most likely uses percentages?", options: ["Measuring a wooden desk", "Finding a test score result", "Naming planets in the system", "Identifying parts of a flower"], correct: 1 }
+            ]
+        },
+        {
+            title: "Vocabulary of Measurement",
+            text: "Everywhere in mathematics and science is the subject of measurement. We all measure length and height, distances, and the weights of things. The ordinary words used for measurement include meter and meter stick in mathematics, mile and yard, and Greek foot to the inch in science. The ruler measures the short things, while the measuring tape takes in the longer ones. Children love measurement, so besides solving their word problems with tape and yardsticks, athletes take the",
+            questions: [
+                { q: "What is measurement commonly used for?", options: ["Studying poetry and drama", "Comparing size and distance", "Learning songs for programs", "Reading stories in libraries"], correct: 1 },
+                { q: "Which tool is best for longer measurements?", options: ["Small classroom ruler", "Short wooden pencil", "Measuring tape tool", "Science notebook paper"], correct: 2 },
+                { q: "Why do athletes use measurement?", options: ["To solve algebra equations", "To improve reading comprehension", "To compare physical performance", "To identify states of matter"], correct: 2 },
+                { q: "Which unit measures shorter distances?", options: ["Meter and inch", "Kilogram and liter", "Calendar and clock", "Fraction and percent"], correct: 0 },
+                { q: "What can students learn from measurement activities?", options: ["How to design buildings", "How to describe feelings", "How to understand quantities", "How to memorize poems quickly"], correct: 2 }
+            ]
+        },
+        {
+            title: "Learning Good Study Habits",
+            text: "Good study habits help students succeed in school and improve academic performance. Students should create a study schedule to manage time wisely and complete assignments on time. A quiet environment helps students focus during reading and writing activities. Taking notes during lessons also improves understanding and memory. Some students review vocabulary words and practice grammar exercises every night. Others ask teachers questions when they do not understand a lesson. Rest and proper sleep are important because tired students may lose concentration in class. Reading books regularly can improve comprehension and communication skills. Developing good study habits helps students become responsible, organized, and confident learners in different subjects.",
+            questions: [
+                { q: "Why should students create study schedules?", options: ["To decorate school notebooks", "To manage time wisely", "To avoid classroom lessons", "To shorten homework periods"], correct: 1 },
+                { q: "What helps students focus during studying?", options: ["A quiet environment", "A crowded hallway", "A noisy playground", "A busy cafeteria"], correct: 0 },
+                { q: "Why is proper sleep important for students?", options: ["It improves handwriting speed", "It increases classroom noise", "It prevents losing concentration", "It removes difficult assignments"], correct: 2 },
+                { q: "Which activity can improve communication skills?", options: ["Reading books regularly", "Skipping grammar exercises", "Ignoring teacher instructions", "Avoiding classroom discussions"], correct: 0 },
+                { q: "What is the main idea of the passage?", options: ["Students enjoy different hobbies", "Good habits support learning success", "Teachers assign difficult projects daily", "Schools require longer study hours"], correct: 1 }
+            ]
+        },
+        {
+            title: "Preparing for a School Program",
+            text: "Students in Grade Seven prepared for the school program with excitement and teamwork. Some students practiced singing for the choir presentation, while others rehearsed dances and short plays. The teachers guided students during practice and reminded them to speak clearly on stage. One group worked on decorations using colorful paper and art materials. Another group prepared invitations for parents and guests. During the final rehearsal, students felt nervous but continued practicing confidently. On the day of the program, everyone wore clean uniforms and performed well. The audience applauded loudly after each performance. The school program became successful because students cooperated and showed responsibility throughout the preparation activities.",
+            questions: [
+                { q: "What helped make the school program successful?", options: ["Expensive stage decorations", "Cooperation among students", "Short practice sessions daily", "Strict classroom punishments"], correct: 1 },
+                { q: "Why did students continue rehearsing confidently?", options: ["They wanted to avoid homework", "They planned to leave early", "They hoped to impress visitors", "They wished to improve performances"], correct: 3 },
+                { q: "What was one group responsible for preparing?", options: ["Colorful decorations and materials", "Science experiments for visitors", "Sports equipment for athletes", "Musical instruments for teachers"], correct: 0 },
+                { q: "How did the audience respond after performances?", options: ["They remained completely silent", "They asked difficult questions", "They applauded very loudly", "They left the building early"], correct: 2 },
+                { q: "Which trait did students show during preparation?", options: ["Laziness during rehearsals", "Responsibility in activities", "Fear of speaking publicly", "Anger toward classmates"], correct: 1 }
+            ]
+        },
+        {
+            title: "The School Library",
+            text: "The school library is a quiet place where students can read and study. Shelves are filled with books about science, mathematics, history, and literature. Students visit the library to borrow books, complete assignments, and improve reading skills. The librarian helps students find information and choose interesting stories to read. Some students prefer adventure books, while others enjoy poetry and biographies. Reading regularly helps students learn new vocabulary and improve comprehension. The library also has dictionaries, newspapers, and reference materials for research projects. Many students enjoy spending time in the library because it provides knowledge, peace, and opportunities to discover new ideas and information.",
+            questions: [
+                { q: "Why do students visit the library?", options: ["To practice outdoor games", "To complete schoolwork tasks", "To prepare food for lunch", "To perform musical programs"], correct: 1 },
+                { q: "What does the librarian help students do?", options: ["Repair damaged furniture", "Organize classroom schedules", "Find books and information", "Practice speeches for contests"], correct: 2 },
+                { q: "Which material is found in the library?", options: ["Cooking ingredients and tools", "Newspapers and dictionaries", "Sports uniforms and medals", "Paintbrushes and art supplies"], correct: 1 },
+                { q: "Why do many students enjoy the library?", options: ["It offers quiet and knowledge", "It provides free classroom grades", "It allows games during lessons", "It replaces daily homework tasks"], correct: 0 },
+                { q: "What skill can improve through regular reading?", options: ["Swimming and running speed", "Singing and dance movements", "Vocabulary and comprehension", "Drawing and painting techniques"], correct: 2 }
+            ]
+        },
+        {
+            title: "A Helpful Friend",
+            text: "Maria is a kind and helpful student in Grade Seven. Every morning, she arrives at school early and greets her classmates with a smile. During English class, she helps other students understand difficult words and sentences. One day, her friend forgot to bring a notebook for the lesson. Maria shared her extra notebook without hesitation. After class, the teacher praised Maria for her good attitude and responsibility. Her classmates admired her because she was respectful and caring. Maria believes that helping others can make school a happier place. Because of her kindness, many students enjoy being her friend and working with her during activities.",
+            questions: [
+                { q: "Why did Maria’s classmates admire her?", options: ["She always answered quickly", "She behaved kindly and respectfully", "She finished tasks before others", "She joined every school contest"], correct: 1 },
+                { q: "What did Maria do when her friend forgot a notebook?", options: ["She shared an extra notebook", "She borrowed one from teachers", "She asked classmates for help", "She explained the lesson aloud"], correct: 0 },
+                { q: "How did the teacher respond to Maria’s actions?", options: ["The teacher ignored her kindness", "The teacher assigned more homework", "The teacher praised her attitude", "The teacher excused her absence"], correct: 2 },
+                { q: "What belief does Maria express in the passage?", options: ["Teamwork always wins contests", "Kindness can improve school life", "Students should avoid mistakes", "Friends must study every night"], correct: 1 },
+                { q: "Which word best describes Maria?", options: ["Caring toward other people", "Quiet during group activities", "Nervous before class lessons", "Competitive in school programs"], correct: 0 }
+            ]
+        },
+        {
+            title: "Patterns and Algebra",
+            text: "Algebra is a branch of mathematics that uses symbols and letters to represent numbers. Students learn to solve equations and identify patterns in algebra class. A variable is a letter that stands for an unknown number. Equations contain equal signs that show two sides have the same value. Patterns help students predict what comes next in a sequence. For example, adding two to each number creates a simple pattern. Algebra is useful in business, science, and technology. Engineers and scientists use algebra to solve problems and make calculations. Understanding algebra helps students develop critical thinking and improve their mathematical reasoning skills every day.",
+            questions: [
+                { q: "What does a variable represent in algebra?", options: ["A hidden unknown number", "A completed math answer", "A graph with straight lines", "A ruler used for measuring"], correct: 0 },
+                { q: "Why are patterns important in algebra?", options: ["They improve drawing abilities", "They help predict sequences", "They explain weather changes", "They replace scientific tools"], correct: 1 },
+                { q: "Which field commonly uses algebra?", options: ["Literature and poetry", "Music and painting", "Business and science", "Farming and cooking"], correct: 2 },
+                { q: "What does an equal sign show in equations?", options: ["Both sides have equal value", "Numbers should change places", "Variables must stay hidden", "Patterns continue forever daily"], correct: 0 },
+                { q: "What skill does algebra help students develop?", options: ["Strong athletic coordination", "Advanced cooking techniques", "Mathematical reasoning skills", "Artistic design creativity"], correct: 2 }
+            ]
+        },
+        {
+            title: "States of Matter",
+            text: "Matter is anything that has mass and takes up space. The three common states of matter are solid, liquid, and gas. Solids have a fixed shape and volume. Liquids have a fixed volume but can change shape depending on the container. Gases spread out and do not have a fixed shape or volume. Heat can change the state of matter. Ice melts into water when heated. Water turns into vapor during evaporation. Scientists study matter to understand physical and chemical changes. Matter is found everywhere, including rocks, air, water, plants, and animals. Understanding matter helps people learn more about science and daily life.",
+            questions: [
+                { q: "Which state of matter has a fixed shape?", options: ["Gas inside the air", "Liquid inside bottles", "Vapor during evaporation", "Solid with steady form"], correct: 3 },
+                { q: "What happens when ice is heated?", options: ["It changes into water", "It spreads into gas", "It becomes a hard rock", "It disappears from matter"], correct: 0 },
+                { q: "Why do scientists study matter?", options: ["To understand physical changes", "To improve musical performances", "To create fictional stories", "To design school uniforms"], correct: 0 },
+                { q: "Which statement correctly describes gases?", options: ["They keep a fixed shape", "They spread out freely", "They remain hard and solid", "They stay inside the soil"], correct: 1 },
+                { q: "What is the main idea of the passage?", options: ["Matter exists in different forms", "Water changes only during winter", "Solids are heavier than liquids", "Science explains classroom behavior"], correct: 0 }
+            ]
+        }
+    ],
+    MODERATE: [
+        {
             title: "A Peaceful Morning in the Park",
             text: "On a quiet morning, Lila walked to the small park near her home. The grass was still wet with dew, and the air smelled fresh and clean. She carried a book but decided to watch the birds instead. A bright yellow bird landed on a bench, chirping softly. Lila smiled and sat nearby, enjoying the peaceful moment. Soon, a gentle breeze moved the leaves, creating a calming sound. She felt relaxed and happy, grateful for the simple beauty around her. After a while, she opened her book and began to read quietly. The quiet park made her feel calm inside.",
             questions: [
@@ -137,7 +271,7 @@ const assessmentData = {
             ]
         }
     ],
-    MEDIUM: [
+    DIFFICULT: [
         {
             title: "The Unexpected Visitor",
             text: "On a quiet afternoon, Elena was studying when she heard a soft knock at the door. She opened it slowly and saw a small puppy standing outside, shivering and alone. Elena looked around but did not see anyone nearby. She brought the puppy inside and gave it food and water. The puppy quickly warmed up and began wagging its tail. Elena felt happy taking care of it. Later, she asked her neighbors if they had lost a puppy. Soon, the owner arrived and thanked her. Although she felt sad to say goodbye, she was glad she had helped the little animal safely return home.",
@@ -249,7 +383,7 @@ const assessmentData = {
             ]
         }
     ],
-    HARD: [
+    VERY_DIFFICULT: [
         {
             title: "The Archivist’s Dilemma",
             text: "Elias preserved forgotten histories in a dimly lit archive. He found an anomalous document contradicting official records of a celebrated event. The official account seemed curated to hide uncomfortable truths. Elias feared revealing it would destabilize the institution. He felt torn between integrity and institutional loyalty.",
@@ -361,7 +495,6 @@ const assessmentData = {
             ]
         }
     ]
-
 };
 
 let recognition;
